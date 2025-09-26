@@ -833,8 +833,8 @@ public class GeneratorTests
 
         return source[eol..].TrimStart();
     }
-
-    /// <summary>Loads the BitsKit.Generator assembly into the current AppDomain</summary>
-    [BitObject(BitOrder.LeastSignificant)]
-    private readonly partial struct BitsKitGeneratorStub { }
 }
+
+/// <summary>Loads the BitsKit.Generator assembly into the current AppDomain</summary>
+[BitObject(BitOrder.LeastSignificant)]
+internal readonly partial struct BitsKitGeneratorStub { }

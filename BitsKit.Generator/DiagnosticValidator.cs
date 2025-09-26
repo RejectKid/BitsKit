@@ -19,26 +19,6 @@ internal static class DiagnosticValidator
         return descriptor is { DefaultSeverity: DiagnosticSeverity.Error };
     }
 
-    public static bool IsNotPartial(SourceProductionContext context, TypeDeclarationSyntax typeDeclaration, string typeName)
-    {
-        return !typeDeclaration.Modifiers.Any(m => m.IsKind(SyntaxKind.PartialKeyword))
-            && ReportDiagnostic(
-                context,
-                DiagnosticDescriptors.MustBePartial,
-                typeDeclaration.GetLocation(),
-                typeName);
-    }
-
-    public static bool IsNested(SourceProductionContext context, TypeDeclarationSyntax typeDeclaration, string typeName)
-    {
-        return typeDeclaration.Parent is TypeDeclarationSyntax
-            && ReportDiagnostic(
-                context,
-                DiagnosticDescriptors.NestedNotAllowed,
-                typeDeclaration.GetLocation(),
-                typeName);
-    }
-
     public static bool HasMissingFieldType(SourceProductionContext context, BitFieldModel bitField, string typeName)
     {
         return bitField.FieldType is null

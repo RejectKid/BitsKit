@@ -84,10 +84,6 @@ internal sealed class TypeSymbolProcessor
     {
         bool hasCompilationIssues = false;
 
-        if (DiagnosticValidator.IsNotPartial(context, TypeDeclaration, TypeSymbol.Name) |
-            DiagnosticValidator.IsNested(context, TypeDeclaration, TypeSymbol.Name))
-            hasCompilationIssues = true;
-
         foreach (BitFieldModel field in _fields)
         {
             if (field.HasCompilationIssues(context, this))
