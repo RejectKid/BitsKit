@@ -22,10 +22,7 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
             .WithComparer(TypeSymbolProcessorComparer.Default)
             .Where(x => x is not null)!;
 
-        IncrementalValueProvider<(Compilation, ImmutableArray<TypeSymbolProcessor>)> model = context
-            .CompilationProvider
-            .Combine(typeDeclarations.Collect());
-
+        var model = typeDeclarations.Collect();
         context.RegisterSourceOutput(model, GenerateSourceCode);
     }
 
@@ -46,15 +43,15 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
         return new(typeSymbol, typeDeclaration, attribute);
     }
 
-    private static void GenerateSourceCode(SourceProductionContext context, (Compilation _, ImmutableArray<TypeSymbolProcessor> Processors) result)
+    private static void GenerateSourceCode(SourceProductionContext context, ImmutableArray<TypeSymbolProcessor> processors)
     {
-        if (result.Processors.Length == 0)
+        if (processors.Length == 0)
             return;
 
         StringBuilder stringBuilder = new(StringConstants.Header);
 
         // group the objects by their respective namespace
-        var namespaceGroups = result.Processors.GroupBy(x => x.Namespace);
+        var namespaceGroups = processors.GroupBy(x => x.Namespace);
 
         foreach (var namespaceGroup in namespaceGroups)
         {
