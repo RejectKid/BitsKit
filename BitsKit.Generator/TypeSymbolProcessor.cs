@@ -8,14 +8,12 @@ namespace BitsKit.Generator;
 
 internal sealed record TypeSymbolProcessor
 {
-    public IReadOnlyList<BitFieldModel> Fields => _fields; // todo: eq
+    public EquatableReadOnlyList<BitFieldModel> Fields { get; }
     public string? Namespace { get; }
     
     public BitOrder DefaultBitOrder { get; }
     public bool IsStruct { get; }
     public bool IsInlineArray { get; }
-
-    private readonly List<BitFieldModel> _fields = [];
     
     private readonly string _syntaxKeyword;
     private readonly string _syntaxIdentifier;
@@ -39,7 +37,7 @@ internal sealed record TypeSymbolProcessor
         IsStruct = typeSymbol.TypeKind == TypeKind.Struct;
         IsInlineArray = HasInlineArrayAttribute(typeSymbol);
         
-        EnumerateFields(typeSymbol);
+        Fields = EnumerateFields(typeSymbol);
     }
 
     public void GenerateCSharpSource(StringBuilder sb)
@@ -50,7 +48,7 @@ internal sealed record TypeSymbolProcessor
             _syntaxIdentifier)
           .AppendIndentedLine(1, "{");
 
-        foreach (BitFieldModel field in _fields)
+        foreach (BitFieldModel field in Fields)
             field.GenerateCSharpSource(sb);
 
         sb.RemoveLastLine()
@@ -58,9 +56,9 @@ internal sealed record TypeSymbolProcessor
           .AppendLine();
     }
 
-    private int EnumerateFields(ITypeSymbol typeSymbol)
+    private EquatableReadOnlyList<BitFieldModel> EnumerateFields(ITypeSymbol typeSymbol)
     {
-        _fields.Clear();
+        var output = new List<BitFieldModel>();
 
         foreach (IFieldSymbol field in typeSymbol.GetMembers().OfType<IFieldSymbol>())
         {
@@ -87,13 +85,13 @@ internal sealed record TypeSymbolProcessor
                 continue;
 
             var backingModel = new BackingFieldModel(field, backingType);
-            CreateBitFieldModels(field, backingModel);
+            CreateBitFieldModels(output, field, backingModel);
         }
 
-        return _fields.Count;
+        return output.ToEquatableReadOnlyList();
     }
 
-    private void CreateBitFieldModels(IFieldSymbol backingField, BackingFieldModel backingModel)
+    private void CreateBitFieldModels(List<BitFieldModel> output, IFieldSymbol backingField, BackingFieldModel backingModel)
     {
         int offset = 0;
 
@@ -123,7 +121,7 @@ internal sealed record TypeSymbolProcessor
                     bitField.FieldType ??= backingField.Type.SpecialType.ToBitFieldType();
 
                 // add to list of fields to generate
-                _fields.Add(bitField);
+                output.Add(bitField);
             }
 
             offset += bitField.BitCount;
