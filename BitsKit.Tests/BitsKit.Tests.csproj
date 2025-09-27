@@ -2,12 +2,9 @@
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;net7.0;net8.0</TargetFrameworks>
-    <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-    <Platforms>AnyCPU;x86;x64</Platforms>
 	<EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
 	<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
-	<LangVersion>preview</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

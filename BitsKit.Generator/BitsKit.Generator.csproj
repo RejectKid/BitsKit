@@ -3,10 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <IncludeBuildOutput>false</IncludeBuildOutput>
-    <LangVersion>preview</LangVersion>
-    <Nullable>enable</Nullable>
     <IsRoslynComponent>true</IsRoslynComponent>
-    <Platforms>AnyCPU;x86;x64</Platforms>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
     <EnforceExtendedAnalyzerRules>True</EnforceExtendedAnalyzerRules>
   </PropertyGroup>
