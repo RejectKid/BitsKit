@@ -1,8 +1,8 @@
 {
   "profiles": {
-    "Profile 1": {
+    "Debug Source Generator - on BitsKit.Tests": {
       "commandName": "DebugRoslynComponent",
-      "targetProject": "..\\BitsKit.Generator.Tests\\BitsKit.Generator.Tests.csproj"
+      "targetProject": "..\\BitsKit.Tests\\BitsKit.Tests.csproj"
     }
   }
 }
