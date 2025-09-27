@@ -261,7 +261,7 @@ public class GeneratorTests
         }
         ";
 
-        string? sourceOutput = GenerateSourceAndTest(source, new BitObjectGenerator());
+        string? sourceOutput = GenerateSourceAndTest(source);
 
         Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
     }
@@ -304,7 +304,7 @@ public class GeneratorTests
         }
         ";
 
-        string? sourceOutput = GenerateSourceAndTest(source, new BitObjectGenerator());
+        string? sourceOutput = GenerateSourceAndTest(source);
 
         Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
     }
@@ -461,7 +461,7 @@ public class GeneratorTests
         }
         ";
 
-        string? sourceOutput = GenerateSourceAndTest(source, new BitObjectGenerator());
+        string? sourceOutput = GenerateSourceAndTest(source);
 
         Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
     }
@@ -553,7 +553,7 @@ public class GeneratorTests
         }
         ";
 
-        string? sourceOutput = GenerateSourceAndTest(source, new BitObjectGenerator());
+        string? sourceOutput = GenerateSourceAndTest(source);
 
         Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
 #endif
@@ -608,7 +608,7 @@ public class GeneratorTests
         }
         ";
 
-        string? sourceOutput = GenerateSourceAndTest(source, new BitObjectGenerator());
+        string? sourceOutput = GenerateSourceAndTest(source);
 
         Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
     }
@@ -689,7 +689,7 @@ public class GeneratorTests
         }
         ";
 
-        string? sourceOutput = GenerateSourceAndTest(source, new BitObjectGenerator());
+        string? sourceOutput = GenerateSourceAndTest(source);
 
         Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
     }
@@ -726,7 +726,7 @@ public class GeneratorTests
         }
         ";
 
-        string? sourceOutput = GenerateSourceAndTest(source, new BitObjectGenerator());
+        string? sourceOutput = GenerateSourceAndTest(source);
 
         Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
     }
@@ -778,51 +778,93 @@ public class GeneratorTests
         }
         ";
 
-        string? sourceOutput = GenerateSourceAndTest(source, new BitObjectGenerator());
+        string? sourceOutput = GenerateSourceAndTest(source);
 
         Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
     }
 
 #endif
 
-    private static string? GenerateSourceAndTest(string source, IIncrementalGenerator generator)
+    private static string? GenerateSourceAndTest(string source)
     {
         var references = AppDomain.CurrentDomain.GetAssemblies()
                                   .Where(assembly => !assembly.IsDynamic)
                                   .Select(assembly => MetadataReference.CreateFromFile(assembly.Location))
                                   .Cast<MetadataReference>();
 
-        CSharpCompilation compilation = CSharpCompilation.Create("compilation",
-                                        [CSharpSyntaxTree.ParseText(Helpers.GeneratorTestHeader + source)],
-                                        references,
-                                        new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true));
+        CSharpCompilation compilation = CSharpCompilation.Create(
+            assemblyName: "BitsKit.Tests.InMemory",
+            syntaxTrees: [CSharpSyntaxTree.ParseText(Helpers.GeneratorTestHeader + source)],
+            references: references,
+            options: new CSharpCompilationOptions(
+                OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true
+            )
+        );
+        
+        var insignificantEditComp = compilation.Clone()
+            .AddSyntaxTrees(CSharpSyntaxTree.ParseText("// dummy"));
 
-        GeneratorDriver driver = CSharpGeneratorDriver
-           .Create(generator)
-           .RunGeneratorsAndUpdateCompilation(compilation, out Compilation? outputCompilation, out ImmutableArray<Diagnostic> diagnostics);
+        GeneratorDriver driver = CSharpGeneratorDriver.Create(
+            generators: [new BitObjectGenerator().AsSourceGenerator()],
+            driverOptions: new GeneratorDriverOptions(default, trackIncrementalGeneratorSteps: true));
 
-        var diag = outputCompilation.GetDiagnostics();
+        var run1Result = RunGenerator(ref driver, compilation);
+        var run2Result = RunGenerator(ref driver, insignificantEditComp);
+        
+        foreach (var outputStep in run2Result.Results[0].TrackedOutputSteps)
+        {
+            AssertGeneratorDidntRun(outputStep.Value);
+        }
+        AssertGeneratorDidntRun(run2Result.Results[0].TrackedSteps["Main"]);
+        
+        Assert.AreEqual(run1Result.GeneratedTrees.Length, 1);
+        Assert.IsTrue(run1Result.Diagnostics.IsEmpty);
 
-        Assert.IsTrue(diagnostics.IsEmpty); // there were no diagnostics created by the generators
-        Assert.AreEqual(outputCompilation.SyntaxTrees.Count(), 2); // we have two syntax trees, the original 'user' provided one, and the one added by the generator
-        Assert.IsTrue(outputCompilation.GetDiagnostics().IsEmpty); // verify the compilation with the added source has no diagnostics
-
-        GeneratorDriverRunResult runResult = driver.GetRunResult();
-
-        Assert.AreEqual(runResult.GeneratedTrees.Length, 1);
-        Assert.IsTrue(runResult.Diagnostics.IsEmpty);
-
-        GeneratorRunResult generatorResult = runResult.Results[0];
+        GeneratorRunResult generatorResult = run1Result.Results[0];
         Assert.AreEqual(generatorResult.Generator.GetGeneratorType(), typeof(BitObjectGenerator));
         Assert.IsTrue(generatorResult.Diagnostics.IsEmpty);
         Assert.AreEqual(generatorResult.GeneratedSources.Length, 1);
         Assert.IsTrue(generatorResult.Exception is null);
 
         string sourceOutput = generatorResult.GeneratedSources[0].SourceText.ToString();
-
         return TruncateUsings(sourceOutput);
     }
+    
+    private static GeneratorDriverRunResult RunGenerator(
+        ref GeneratorDriver driver,
+        Compilation compilation
+    )
+    {
+        driver = driver
+            .RunGeneratorsAndUpdateCompilation(
+                compilation,
+                out var outputCompilation,
+                out var diagnostics
+            );
 
+        // verify the compilation with the added source has no diagnostics
+        Assert.IsFalse(
+            outputCompilation
+                .GetDiagnostics()
+                .Any(d => d.Severity is DiagnosticSeverity.Error or DiagnosticSeverity.Warning)
+        );
+
+        // there were no diagnostics created by the generators
+        Assert.IsTrue(diagnostics.IsEmpty);
+        
+        return driver.GetRunResult();
+    }
+    
+    private static void AssertGeneratorDidntRun(ImmutableArray<IncrementalGeneratorRunStep> steps)
+    {
+        var outputs = steps.SelectMany(o => o.Outputs);
+        foreach (var output in outputs)
+        {
+            Assert.IsTrue(output.Reason == IncrementalStepRunReason.Unchanged || 
+                          output.Reason == IncrementalStepRunReason.Cached);
+        }
+    }
+    
     private static string? TruncateUsings(string? source)
     {
         if (string.IsNullOrEmpty(source))

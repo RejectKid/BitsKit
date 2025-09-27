@@ -19,7 +19,8 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
                 StringConstants.BitObjectAttributeFullName,
                 predicate: IsValidTypeDeclaration,
                 transform: ProcessSyntaxNode)
-            .Where(x => x is not null)!;
+            .Where(x => x is not null)
+            .WithTrackingName("Main")!;
 
         var model = typeDeclarations.Collect();
         context.RegisterSourceOutput(model, GenerateSourceCode);
