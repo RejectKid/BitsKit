@@ -69,11 +69,6 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
                 if (processor.EnumerateFields() == 0)
                     continue;
 
-                // check and report any compilation issues and prevent
-                // code generation for this type if there are
-                if (processor.ReportCompilationIssues(context))
-                    continue;
-
                 processor.GenerateCSharpSource(stringBuilder);
             }
 

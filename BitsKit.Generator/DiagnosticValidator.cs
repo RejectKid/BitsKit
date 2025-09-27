@@ -16,7 +16,7 @@ internal static class DiagnosticValidator
         return descriptor is { DefaultSeverity: DiagnosticSeverity.Error };
     }
 
-    public static bool HasMissingFieldType(SourceProductionContext context, BitFieldModel bitField, string typeName)
+    /*public static bool HasMissingFieldType(SourceProductionContext context, BitFieldModel bitField, string typeName)
     {
         return bitField.FieldType is null
             && ReportDiagnostic(
@@ -25,5 +25,5 @@ internal static class DiagnosticValidator
                 bitField.BackingField.Locations[0],
                 typeName,
                 bitField.Name);
-    }
+    }*/
 }

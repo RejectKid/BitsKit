@@ -87,26 +87,14 @@ internal sealed class TypeSymbolProcessor
             if (backingType == BackingFieldType.Invalid)
                 continue;
 
-            CreateBitFieldModels(field, backingType);
+            var backingModel = new BackingFieldModel(field, backingType);
+            CreateBitFieldModels(field, backingModel);
         }
 
         return _fields.Count;
     }
 
-    public bool ReportCompilationIssues(SourceProductionContext context)
-    {
-        bool hasCompilationIssues = false;
-
-        foreach (BitFieldModel field in _fields)
-        {
-            if (field.HasCompilationIssues(context, this))
-                hasCompilationIssues = true;
-        }
-
-        return hasCompilationIssues;
-    }
-
-    private void CreateBitFieldModels(IFieldSymbol backingField, BackingFieldType backingType)
+    private void CreateBitFieldModels(IFieldSymbol backingField, BackingFieldModel backingModel)
     {
         int offset = 0;
 
@@ -117,8 +105,7 @@ internal sealed class TypeSymbolProcessor
             if (bitField == null)
                 continue;
 
-            bitField.BackingField = backingField;
-            bitField.BackingFieldType = backingType;
+            bitField.BackingField = backingModel;
             bitField.BitOffset = offset;
             bitField.BitOrder = _defaultBitOrder;
 
@@ -130,11 +117,11 @@ internal sealed class TypeSymbolProcessor
                     bitField.BitOrder ^= BitOrder.MostSignificant;
 
                 // integrals inherit their field type from their backing field
-                if (backingType == BackingFieldType.Integral)
+                if (backingModel.Type == BackingFieldType.Integral)
                     bitField.FieldType = backingField.Type.SpecialType.ToBitFieldType();
 
                 // allow inline arrays to infer their type
-                if (backingType == BackingFieldType.InlineArray)
+                if (backingModel.Type == BackingFieldType.InlineArray)
                     bitField.FieldType ??= backingField.Type.SpecialType.ToBitFieldType();
 
                 // add to list of fields to generate

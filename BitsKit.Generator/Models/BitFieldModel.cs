@@ -9,8 +9,8 @@ internal abstract class BitFieldModel
     public string Name { get; set; } = null!;
     public BitFieldType? FieldType { get; set; }
     public string? ReturnType { get; set; }
-    public IFieldSymbol BackingField { get; set; } = null!;
-    public BackingFieldType BackingFieldType { get; set; }
+    public BackingFieldModel BackingField { get; set; } = null!;
+    public BackingFieldType BackingFieldType => BackingField.Type;
     public int BitOffset { get; set; }
     public int BitCount { get; set; }
     public BitOrder BitOrder { get; set; }
@@ -54,7 +54,7 @@ internal abstract class BitFieldModel
             GetPropertyTemplate(),
             accessor,
             Modifiers.HasFlag(BitFieldModifiers.Required) ? "required" : "",
-            ReturnType ?? FieldType.ToString(),
+            ReturnType ?? FieldType?.ToString(),
             Name)
           .AppendIndentedLine(2, "{");
 
@@ -64,13 +64,13 @@ internal abstract class BitFieldModel
                 GetGetterTemplate(),
                 SupportsReadOnlyGetter() ? "readonly" : "",
                 "get",
-                FieldType!.Value.ToIntegralName(),
+                FieldType?.ToIntegralName(),
                 BitOrder.ToShortName(),
                 BackingField.Name,
                 BitOffset,
                 BitCount,
                 BackingField.FixedSize,
-                BackingField.Type);
+                BackingField.TypeString);
         }
 
         // setter
@@ -80,25 +80,17 @@ internal abstract class BitFieldModel
                 GetSetterTemplate(),
                 "",
                 Modifiers.HasFlag(BitFieldModifiers.InitOnly) ? "init" : "set",
-                FieldType!.Value.ToIntegralName(),
+                FieldType?.ToIntegralName(),
                 BitOrder.ToShortName(),
                 BackingField.Name,
                 BitOffset,
                 BitCount,
                 BackingField.FixedSize,
-                BackingField.Type);
+                BackingField.TypeString);
         }
 
         sb.AppendIndentedLine(2, "}")
           .AppendLine();
-    }
-
-    /// <summary>
-    /// Diagnoses if the field will produce non-compilable or erroneous code
-    /// </summary>
-    public virtual bool HasCompilationIssues(SourceProductionContext context, TypeSymbolProcessor processor)
-    {
-        return DiagnosticValidator.HasMissingFieldType(context, this, processor.TypeSymbol.Name);
     }
 
     /// <summary>
@@ -186,7 +178,7 @@ internal abstract class BitFieldModel
     /// </summary>
     protected bool IsReadOnly()
     {
-        string backingType = BackingField.Type.ToDisplayString();
+        string backingType = BackingField.TypeString;
 
         return BackingField.IsReadOnly ||
                backingType == "System.ReadOnlySpan<byte>" ||

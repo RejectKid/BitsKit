@@ -19,6 +19,9 @@ namespace BitsKit.Generator.Analysers
             context.EnableConcurrentExecution();
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             
+            // todo: reintroduce FieldTypeNotDefined
+            // but i'm not sure how it was triggered
+            
             context.RegisterCompilationStartAction(context =>
             {
                 var bitFieldAttribute = context.Compilation.GetTypeByMetadataName(StringConstants.BitFieldAttributeFullName);
