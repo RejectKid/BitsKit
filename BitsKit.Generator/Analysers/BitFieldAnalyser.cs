@@ -1,8 +1,9 @@
 ﻿using System.Collections.Immutable;
+using BitsKit.Generator.Models;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace BitsKit.Generator
+namespace BitsKit.Generator.Analysers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class BitFieldAnalyser : DiagnosticAnalyzer
@@ -10,6 +11,7 @@ namespace BitsKit.Generator
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = [
             DiagnosticDescriptors.ConflictingAccessors,
             DiagnosticDescriptors.ConflictingSetters,
+            DiagnosticDescriptors.EnumTypeExpected
         ];
         
         public override void Initialize(AnalysisContext context)
@@ -54,6 +56,17 @@ namespace BitsKit.Generator
                             context.ReportDiagnostic(
                                 Diagnostic.Create(DiagnosticDescriptors.ConflictingSetters, thisAttribute.ApplicationSyntaxReference!.GetSyntax().GetLocation(), fieldSymbol.ContainingType.Name, bitField.Name)
                             );
+                        }
+                        
+                        if (bitField is EnumFieldModel)
+                        {
+                            var enumFieldAttrModel = new EnumFieldAttributeModel(thisAttribute);
+                            if (enumFieldAttrModel.EnumType != null && enumFieldAttrModel.EnumType.EnumUnderlyingType == null)
+                            {
+                                context.ReportDiagnostic(
+                                    Diagnostic.Create(DiagnosticDescriptors.EnumTypeExpected, thisAttribute.ApplicationSyntaxReference!.GetSyntax().GetLocation(), fieldSymbol.ContainingType.Name, bitField.Name)
+                                );
+                            }
                         }
                     }
                 }, SymbolKind.Field);

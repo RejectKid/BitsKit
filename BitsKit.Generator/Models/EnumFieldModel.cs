@@ -1,15 +1,18 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.IO;
+using Microsoft.CodeAnalysis;
 
 namespace BitsKit.Generator.Models;
 
 /// <summary>
-/// A model representing an enum bit-field
+/// Parsed data from EnumFieldAttribute. Intermediate data only (don't store in incremental pipeline)
 /// </summary>
-internal sealed class EnumFieldModel : BitFieldModel
+internal class EnumFieldAttributeModel
 {
+    public string? Name { get; }
     public INamedTypeSymbol? EnumType { get; }
-
-    public EnumFieldModel(AttributeData attributeData, TypeSymbolProcessor typeSymbol) : base(attributeData, typeSymbol)
+    public int BitCount { get; set; }
+    
+    public EnumFieldAttributeModel(AttributeData attributeData)
     {
         switch(attributeData.ConstructorArguments.Length)
         {
@@ -22,20 +25,27 @@ internal sealed class EnumFieldModel : BitFieldModel
                 EnumType = attributeData.ConstructorArguments[2].Value as INamedTypeSymbol;
                 break;
             default:
-                return;
+                throw new InvalidDataException($"unknown number of enum attribute constructor arguments: {attributeData.ConstructorArguments.Length}");
         }
+    }
+}
 
-        ReturnType = EnumType?.ToDisplayString();
-        FieldType = EnumType?.EnumUnderlyingType?.SpecialType.ToBitFieldType();
+/// <summary>
+/// A model representing an enum bit-field
+/// </summary>
+internal sealed class EnumFieldModel : BitFieldModel
+{
+    public EnumFieldModel(AttributeData attributeData, TypeSymbolProcessor typeSymbol) : base(attributeData, typeSymbol)
+    {
+        var attributeModel = new EnumFieldAttributeModel(attributeData);
+        Name = attributeModel.Name!; // todo: the nullability on this is well.. wrong. padding fields have no name
+        BitCount = attributeModel.BitCount;
+        
+        ReturnType = attributeModel.EnumType?.ToDisplayString();
+        FieldType = attributeModel.EnumType?.EnumUnderlyingType?.SpecialType.ToBitFieldType();
 
         if (string.IsNullOrEmpty(Name))
             FieldType = BitFieldType.Padding;
-    }
-
-    public override bool HasCompilationIssues(SourceProductionContext context, TypeSymbolProcessor processor)
-    {
-        return DiagnosticValidator.IsNotEnumType(context, this, processor.TypeSymbol.Name) |
-               base.HasCompilationIssues(context, processor);
     }
 
     protected override string GetGetterTemplate()

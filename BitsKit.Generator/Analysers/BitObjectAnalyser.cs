@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace BitsKit.Generator
+namespace BitsKit.Generator.Analysers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class BitObjectAnalyser : DiagnosticAnalyzer
