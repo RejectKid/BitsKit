@@ -6,10 +6,9 @@ using System.Linq;
 
 namespace BitsKit.Generator;
 
-internal sealed class TypeSymbolProcessor
+internal sealed record TypeSymbolProcessor
 {
-    public INamedTypeSymbol TypeSymbol { get; }
-    public IReadOnlyList<BitFieldModel> Fields => _fields;
+    public IReadOnlyList<BitFieldModel> Fields => _fields; // todo: eq
     public string? Namespace { get; }
     
     public BitOrder DefaultBitOrder { get; }
@@ -23,8 +22,6 @@ internal sealed class TypeSymbolProcessor
 
     public TypeSymbolProcessor(INamedTypeSymbol typeSymbol, AttributeData attribute)
     {
-        TypeSymbol = typeSymbol;
-        
         _syntaxKeyword = typeSymbol.TypeKind switch
         {
             TypeKind.Struct when typeSymbol.IsRecord => "record struct",
@@ -40,7 +37,9 @@ internal sealed class TypeSymbolProcessor
         
         DefaultBitOrder = (BitOrder)attribute.ConstructorArguments[0].Value!;
         IsStruct = typeSymbol.TypeKind == TypeKind.Struct;
-        IsInlineArray = HasInlineArrayAttribute();
+        IsInlineArray = HasInlineArrayAttribute(typeSymbol);
+        
+        EnumerateFields(typeSymbol);
     }
 
     public void GenerateCSharpSource(StringBuilder sb)
@@ -59,11 +58,11 @@ internal sealed class TypeSymbolProcessor
           .AppendLine();
     }
 
-    public int EnumerateFields()
+    private int EnumerateFields(ITypeSymbol typeSymbol)
     {
         _fields.Clear();
 
-        foreach (IFieldSymbol field in TypeSymbol.GetMembers().OfType<IFieldSymbol>())
+        foreach (IFieldSymbol field in typeSymbol.GetMembers().OfType<IFieldSymbol>())
         {
             if (!IsValidFieldSymbol(field))
                 continue;
@@ -144,9 +143,9 @@ internal sealed class TypeSymbolProcessor
         };
     }
 
-    private bool HasInlineArrayAttribute()
+    private static bool HasInlineArrayAttribute(ITypeSymbol typeSymbol)
     {
-        return (int?)TypeSymbol
+        return (int?)typeSymbol
             .GetAttributes()
             .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == StringConstants.InlineArrayAttributeFullName)?
             .ConstructorArguments[0].Value > 0;

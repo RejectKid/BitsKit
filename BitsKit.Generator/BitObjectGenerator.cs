@@ -19,7 +19,6 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
                 StringConstants.BitObjectAttributeFullName,
                 predicate: IsValidTypeDeclaration,
                 transform: ProcessSyntaxNode)
-            .WithComparer(TypeSymbolProcessorComparer.Default)
             .Where(x => x is not null)!;
 
         var model = typeDeclarations.Collect();
@@ -65,10 +64,6 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
 
             foreach (TypeSymbolProcessor processor in namespaceGroup)
             {
-                // evaluate if there are actually any valid fields
-                if (processor.EnumerateFields() == 0)
-                    continue;
-
                 processor.GenerateCSharpSource(stringBuilder);
             }
 
@@ -85,15 +80,4 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
 
     private static bool IsValidTypeDeclaration(SyntaxNode node, CancellationToken _) =>
         node is ClassDeclarationSyntax or StructDeclarationSyntax or RecordDeclarationSyntax;
-}
-
-file class TypeSymbolProcessorComparer : IEqualityComparer<TypeSymbolProcessor?>
-{
-    public static TypeSymbolProcessorComparer Default { get; } = new();
-
-    public bool Equals(TypeSymbolProcessor? x, TypeSymbolProcessor? y) =>
-        SymbolEqualityComparer.Default.Equals(x?.TypeSymbol, y?.TypeSymbol);
-
-    public int GetHashCode(TypeSymbolProcessor? obj) =>
-        SymbolEqualityComparer.Default.GetHashCode(obj?.TypeSymbol);
 }
