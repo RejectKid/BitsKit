@@ -60,7 +60,7 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
             // print the current namespace
             if (namespaceGroup.Key is not null)
                 stringBuilder
-                    .AppendLine($"namespace {namespaceGroup.Key.Name.ToFullString()}")
+                    .AppendLine($"namespace {namespaceGroup.Key}")
                     .AppendLine("{");
 
             foreach (TypeSymbolProcessor processor in namespaceGroup)

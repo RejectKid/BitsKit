@@ -12,7 +12,7 @@ internal sealed class TypeSymbolProcessor
     public INamedTypeSymbol TypeSymbol { get; }
     public TypeDeclarationSyntax TypeDeclaration { get; }
     public IReadOnlyList<BitFieldModel> Fields => _fields;
-    public BaseNamespaceDeclarationSyntax? Namespace { get; }
+    public string? Namespace { get; }
     public bool IsInlineArray { get; }
 
     private readonly BitOrder _defaultBitOrder;
@@ -22,7 +22,10 @@ internal sealed class TypeSymbolProcessor
     {
         TypeSymbol = typeSymbol;
         TypeDeclaration = typeDeclaration;
-        Namespace = TypeDeclaration.Parent as BaseNamespaceDeclarationSyntax;
+        
+        Namespace = typeSymbol.ContainingNamespace.ToDisplayString(new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces));
+        if (string.IsNullOrWhiteSpace(Namespace)) Namespace = null;
+        
         IsInlineArray = HasInlineArrayAttribute();
 
         _defaultBitOrder = (BitOrder)attribute.ConstructorArguments[0].Value!;
