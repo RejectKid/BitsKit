@@ -1,7 +1,4 @@
-﻿using System.Linq;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.CSharp;
+﻿using Microsoft.CodeAnalysis;
 using BitsKit.Generator.Models;
 
 namespace BitsKit.Generator;
@@ -25,36 +22,6 @@ internal static class DiagnosticValidator
             && ReportDiagnostic(
                 context,
                 DiagnosticDescriptors.FieldTypeNotDefined,
-                bitField.BackingField.Locations[0],
-                typeName,
-                bitField.Name);
-    }
-
-    public static bool HasConflictingAccessors(SourceProductionContext context, BitFieldModel bitField, string typeName)
-    {
-        BitFieldModifiers modifiers = bitField.Modifiers & BitFieldModifiers.AccessorMask;
-
-        // "protected internal" and "private protected" combos are allowed
-        if (modifiers is BitFieldModifiers.ProtectedInternal or BitFieldModifiers.PrivateProtected)
-            return false;
-
-        return (modifiers & (modifiers - 1)) != 0
-            && ReportDiagnostic(
-                context,
-                DiagnosticDescriptors.ConflictingAccessors,
-                bitField.BackingField.Locations[0],
-                typeName,
-                bitField.Name);
-    }
-
-    public static bool HasConflictingSetters(SourceProductionContext context, BitFieldModel bitField, string typeName)
-    {
-        BitFieldModifiers modifiers = bitField.Modifiers & BitFieldModifiers.SetterMask;
-
-        return (modifiers & (modifiers - 1)) != 0
-            && ReportDiagnostic(
-                context,
-                DiagnosticDescriptors.ConflictingSetters,
                 bitField.BackingField.Locations[0],
                 typeName,
                 bitField.Name);

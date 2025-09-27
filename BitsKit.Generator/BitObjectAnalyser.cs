@@ -22,7 +22,7 @@ namespace BitsKit.Generator
             
             context.RegisterCompilationStartAction(context =>
             {
-                var bitObjectAttribute = context.Compilation.GetTypeByMetadataName("BitsKit.BitFields.BitObjectAttribute");
+                var bitObjectAttribute = context.Compilation.GetTypeByMetadataName(StringConstants.BitObjectAttributeFullName);
                 if (bitObjectAttribute == null) return;
                 
                 context.RegisterSymbolAction(context =>

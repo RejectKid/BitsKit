@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.CodeAnalysis;
 
 namespace BitsKit.Generator
@@ -19,6 +20,30 @@ namespace BitsKit.Generator
 
             attributeData = null;
             return false;
+        }
+        
+        public static bool TryGetAttributesWithBaseType(this ISymbol symbol, ITypeSymbol typeSymbol, [NotNullWhen(true)] out List<AttributeData>? result)
+        {
+            result = null;
+            
+            foreach (AttributeData attribute in symbol.GetAttributes())
+            {
+                var attributeClass = attribute.AttributeClass!;
+                do
+                {
+                    if (SymbolEqualityComparer.Default.Equals(attributeClass, typeSymbol))
+                    {
+                        result ??= [];
+                        result.Add(attribute);
+                        break;
+                    }
+                    
+                    attributeClass = attributeClass.BaseType;
+                } while (attributeClass != null);
+                
+            }
+
+            return result != null;
         }
     }
 }

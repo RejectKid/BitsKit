@@ -99,15 +99,7 @@ internal sealed class TypeSymbolProcessor
 
         foreach (AttributeData attribute in backingField.GetAttributes())
         {
-            string? attributeType = attribute.AttributeClass?.ToDisplayString();
-
-            BitFieldModel? bitField = attributeType switch
-            {
-                StringConstants.BitFieldAttributeFullName => new IntegralFieldModel(attribute, this),
-                StringConstants.BooleanFieldAttributeFullName => new BooleanFieldModel(attribute, this),
-                StringConstants.EnumFieldAttributeFullName => new EnumFieldModel(attribute, this),
-                _ => null
-            };
+            BitFieldModel? bitField = CreateBitFieldFromAttribute(attribute, this);
 
             if (bitField == null)
                 continue;
@@ -138,6 +130,19 @@ internal sealed class TypeSymbolProcessor
 
             offset += bitField.BitCount;
         }
+    }
+    
+    public static BitFieldModel? CreateBitFieldFromAttribute(AttributeData attribute, TypeSymbolProcessor processor)
+    {
+        string? attributeType = attribute.AttributeClass?.ToDisplayString();
+            
+        return attributeType switch
+        {
+            StringConstants.BitFieldAttributeFullName => new IntegralFieldModel(attribute, processor),
+            StringConstants.BooleanFieldAttributeFullName => new BooleanFieldModel(attribute, processor),
+            StringConstants.EnumFieldAttributeFullName => new EnumFieldModel(attribute, processor),
+            _ => null
+        };
     }
 
     private bool HasInlineArrayAttribute()
