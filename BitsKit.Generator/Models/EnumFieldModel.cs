@@ -33,9 +33,9 @@ internal class EnumFieldAttributeModel
 /// <summary>
 /// A model representing an enum bit-field
 /// </summary>
-internal sealed class EnumFieldModel : BitFieldModel
+internal sealed record EnumFieldModel : BitFieldModel
 {
-    public EnumFieldModel(AttributeData attributeData, TypeSymbolProcessor typeSymbol) : base(attributeData, typeSymbol)
+    public EnumFieldModel(AttributeData attributeData, TypeSymbolProcessor? typeSymbol) : base(attributeData, typeSymbol)
     {
         var attributeModel = new EnumFieldAttributeModel(attributeData);
         Name = attributeModel.Name!; // todo: the nullability on this is well.. wrong. padding fields have no name

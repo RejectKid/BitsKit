@@ -5,7 +5,7 @@ namespace BitsKit.Generator.Models;
 /// <summary>
 /// A model representing an integral bit-field
 /// </summary>
-internal sealed class IntegralFieldModel : BitFieldModel
+internal sealed record IntegralFieldModel : BitFieldModel
 {
     private bool IsTypeCast => this is
     {
@@ -13,7 +13,7 @@ internal sealed class IntegralFieldModel : BitFieldModel
         ReturnType.Length: > 0
     };
 
-    public IntegralFieldModel(AttributeData attributeData, TypeSymbolProcessor typeSymbol) : base(attributeData, typeSymbol)
+    public IntegralFieldModel(AttributeData attributeData, TypeSymbolProcessor? typeSymbol) : base(attributeData, typeSymbol)
     {
         switch (attributeData.ConstructorArguments.Length)
         {

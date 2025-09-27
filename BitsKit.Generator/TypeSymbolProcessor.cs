@@ -11,10 +11,11 @@ internal sealed class TypeSymbolProcessor
     public INamedTypeSymbol TypeSymbol { get; }
     public IReadOnlyList<BitFieldModel> Fields => _fields;
     public string? Namespace { get; }
+    
+    public BitOrder DefaultBitOrder { get; }
     public bool IsStruct { get; }
     public bool IsInlineArray { get; }
 
-    private readonly BitOrder _defaultBitOrder;
     private readonly List<BitFieldModel> _fields = [];
     
     private readonly string _syntaxKeyword;
@@ -37,10 +38,9 @@ internal sealed class TypeSymbolProcessor
         Namespace = typeSymbol.ContainingNamespace.ToDisplayString(new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces));
         if (string.IsNullOrWhiteSpace(Namespace)) Namespace = null;
         
+        DefaultBitOrder = (BitOrder)attribute.ConstructorArguments[0].Value!;
         IsStruct = typeSymbol.TypeKind == TypeKind.Struct;
         IsInlineArray = HasInlineArrayAttribute();
-
-        _defaultBitOrder = (BitOrder)attribute.ConstructorArguments[0].Value!;
     }
 
     public void GenerateCSharpSource(StringBuilder sb)
@@ -107,7 +107,6 @@ internal sealed class TypeSymbolProcessor
 
             bitField.BackingField = backingModel;
             bitField.BitOffset = offset;
-            bitField.BitOrder = _defaultBitOrder;
 
             // padding fields are not generated
             if (bitField is not { FieldType: BitFieldType.Padding })

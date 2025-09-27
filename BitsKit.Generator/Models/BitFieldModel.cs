@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis;
 
 namespace BitsKit.Generator.Models;
 
-internal abstract class BitFieldModel
+internal abstract record BitFieldModel
 {
     public string Name { get; set; } = null!;
     public BitFieldType? FieldType { get; set; }
@@ -16,11 +16,19 @@ internal abstract class BitFieldModel
     public BitOrder BitOrder { get; set; }
     public bool ReverseBitOrder { get; }
     public BitFieldModifiers Modifiers { get; }
-    public TypeSymbolProcessor TypeSymbol { get; }
+    
+    private readonly bool _containingTypeIsStruct;
 
-    public BitFieldModel(AttributeData attributeData, TypeSymbolProcessor typeSymbol)
+    public BitFieldModel(AttributeData attributeData, TypeSymbolProcessor? typeSymbol)
     {
-        TypeSymbol = typeSymbol;
+        if (typeSymbol != null)
+        {
+            // todo: for now, analyser passes null
+            // these fields don't matter for it
+            
+            _containingTypeIsStruct = typeSymbol.IsStruct;
+            BitOrder = typeSymbol.DefaultBitOrder;
+        }
 
         for (int i = 0; i < attributeData.NamedArguments.Length; i++)
         {
@@ -192,7 +200,7 @@ internal abstract class BitFieldModel
     /// <returns></returns>
     private bool SupportsReadOnlyGetter()
     {
-        return TypeSymbol.IsStruct &&
+        return _containingTypeIsStruct &&
                BackingFieldType != BackingFieldType.Pointer &&
                BackingFieldType != BackingFieldType.InlineArray &&
                !IsReadOnly();
