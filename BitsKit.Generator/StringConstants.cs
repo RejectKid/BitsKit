@@ -31,13 +31,11 @@ internal static class StringConstants
     /// <summary>
     /// Template for the type declaration
     /// <para>
-    /// {0} = Modifiers<br/>
-    /// {1} = Keyword<br/>
-    /// {2} = Record ClassOrStructKeyword<br/>
-    /// {3} = Identifier 
+    /// {0} = Keyword<br/>
+    /// {1} = Identifier 
     /// </para>
     /// </summary>
-    public const string TypeDeclarationTemplate = "{0} {1} {2} {3}";
+    public const string TypeDeclarationTemplate = "partial {0} {1}";
 
     /// <summary>
     /// Template for a property declaration

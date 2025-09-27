@@ -242,7 +242,7 @@ public class GeneratorTests
         ";
 
         string expected = @"
-        public ref partial struct  BitFieldReadOnly
+        partial struct BitFieldReadOnly
         {
             public  Int32 Generated00 
             {
@@ -285,7 +285,7 @@ public class GeneratorTests
         ";
 
         string expected = @"
-        public readonly ref partial struct  BitFieldReadOnly
+        partial struct BitFieldReadOnly
         {
             public  Int32 Generated00 
             {
@@ -344,7 +344,7 @@ public class GeneratorTests
         ";
 
         string expected = @"
-        public unsafe partial class  BitFieldGeneratorTest
+        partial class BitFieldGeneratorTest
         {
             public  Int32 Generated01 
             {
@@ -490,7 +490,7 @@ public class GeneratorTests
         ";
 
         string expected = @"
-        public unsafe partial class  BitFieldGeneratorTest
+        partial class BitFieldGeneratorTest
         {
             public  Int32 Generated01 
             {
@@ -581,7 +581,7 @@ public class GeneratorTests
         ";
 
         string expected = @"
-        public unsafe ref partial struct  BooleanGeneratorTest
+        partial struct BooleanGeneratorTest
         {
             public  System.Boolean Generated01 
             {
@@ -639,7 +639,7 @@ public class GeneratorTests
         ";
 
         string expected = @"
-        public unsafe ref partial struct  EnumGeneratorTest
+        partial struct EnumGeneratorTest
         {
             public  BitsKit.Tests.TestEnum Generated00 
             {
@@ -710,7 +710,7 @@ public class GeneratorTests
         ";
 
         string expected = @"
-        public ref partial struct  BitFieldIntegerConversion
+        partial struct BitFieldIntegerConversion
         {
             public  Byte Generated00 
             {
@@ -750,7 +750,7 @@ public class GeneratorTests
         ";
 
         string expected = @"
-        public partial struct  BitFieldInlineArray
+        partial struct BitFieldInlineArray
         {
             public  Int32 Generated00 
             {

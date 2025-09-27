@@ -40,7 +40,7 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
             .GetAttributes()
             .Single(a => a.AttributeClass?.ToDisplayString() == StringConstants.BitObjectAttributeFullName);
 
-        return new(typeSymbol, typeDeclaration, attribute);
+        return new(typeSymbol, attribute);
     }
 
     private static void GenerateSourceCode(SourceProductionContext context, ImmutableArray<TypeSymbolProcessor> processors)

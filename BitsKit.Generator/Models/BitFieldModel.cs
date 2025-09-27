@@ -200,7 +200,7 @@ internal abstract class BitFieldModel
     /// <returns></returns>
     private bool SupportsReadOnlyGetter()
     {
-        return TypeSymbol.TypeDeclaration.IsStruct() &&
+        return TypeSymbol.IsStruct &&
                BackingFieldType != BackingFieldType.Pointer &&
                BackingFieldType != BackingFieldType.InlineArray &&
                !IsReadOnly();

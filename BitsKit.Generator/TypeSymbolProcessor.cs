@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis;
 using System.Text;
 using BitsKit.Generator.Models;
@@ -10,22 +9,35 @@ namespace BitsKit.Generator;
 internal sealed class TypeSymbolProcessor
 {
     public INamedTypeSymbol TypeSymbol { get; }
-    public TypeDeclarationSyntax TypeDeclaration { get; }
     public IReadOnlyList<BitFieldModel> Fields => _fields;
     public string? Namespace { get; }
+    public bool IsStruct { get; }
     public bool IsInlineArray { get; }
 
     private readonly BitOrder _defaultBitOrder;
     private readonly List<BitFieldModel> _fields = [];
+    
+    private readonly string _syntaxKeyword;
+    private readonly string _syntaxIdentifier;
 
-    public TypeSymbolProcessor(INamedTypeSymbol typeSymbol, TypeDeclarationSyntax typeDeclaration, AttributeData attribute)
+    public TypeSymbolProcessor(INamedTypeSymbol typeSymbol, AttributeData attribute)
     {
         TypeSymbol = typeSymbol;
-        TypeDeclaration = typeDeclaration;
+        
+        _syntaxKeyword = typeSymbol.TypeKind switch
+        {
+            TypeKind.Struct when typeSymbol.IsRecord => "record struct",
+            TypeKind.Struct => "struct",
+            TypeKind.Interface => "interface",
+            TypeKind.Class when typeSymbol.IsRecord => "record",
+            _ => "class"
+        };
+        _syntaxIdentifier = typeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         
         Namespace = typeSymbol.ContainingNamespace.ToDisplayString(new SymbolDisplayFormat(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces));
         if (string.IsNullOrWhiteSpace(Namespace)) Namespace = null;
         
+        IsStruct = typeSymbol.TypeKind == TypeKind.Struct;
         IsInlineArray = HasInlineArrayAttribute();
 
         _defaultBitOrder = (BitOrder)attribute.ConstructorArguments[0].Value!;
@@ -35,10 +47,8 @@ internal sealed class TypeSymbolProcessor
     {
         sb.AppendIndentedLine(1,
             StringConstants.TypeDeclarationTemplate,
-            TypeDeclaration.Modifiers,
-            TypeDeclaration.Keyword.Text,
-            (TypeDeclaration as RecordDeclarationSyntax)?.ClassOrStructKeyword.Text,
-            TypeDeclaration.Identifier.Text)
+            _syntaxKeyword,
+            _syntaxIdentifier)
           .AppendIndentedLine(1, "{");
 
         foreach (BitFieldModel field in _fields)
