@@ -10,6 +10,7 @@ Notable changes to the community-maintained fork are documented here. This proje
 - Validated, tag-driven NuGet and GitHub release automation.
 - CodeQL, Dependabot, package provenance attestations, and contribution guidance.
 - Incremental source-generator regression coverage and analyzer-based diagnostics.
+- Scheduled and on-demand .NET 8/.NET 10 benchmark reports with CI discovery validation.
 
 ### Changed
 
@@ -18,11 +19,13 @@ Notable changes to the community-maintained fork are documented here. This proje
 - The source generator no longer retains Roslyn symbols or syntax nodes between runs.
 - Library packages target `netstandard2.1`, .NET 8, and .NET 10; the EOL .NET 6 and .NET 7 assets were removed.
 - Tests and benchmarks use current MSTest, test SDK, coverage, Roslyn, analyzer, and BenchmarkDotNet packages.
+- The benchmark executable accepts standard BenchmarkDotNet command-line filters, jobs, runtimes, and exporters.
 
 ### Fixed
 
 - Restored `BITSKIT003` when a memory-backed bit field omits its required `FieldType`.
 - Generate writable spans for inline-array setters so consumers compile with modern C# compilers.
+- BenchmarkDotNet generated projects resolve repository metadata correctly, and failed benchmark reports now fail the process.
 
 ## 1.2.0 - 2024-11-19
 

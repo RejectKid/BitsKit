@@ -94,6 +94,9 @@ jobs:
       - name: Build
         run: dotnet build BitsKit.sln --configuration Release --no-restore
 
+      - name: Validate benchmark discovery
+        run: dotnet run --project BitsKit.Benchmarks/BitsKit.Benchmarks.csproj --configuration Release --framework net10.0 --no-build -- --list flat
+
       - name: Pack
         run: dotnet pack BitsKit/BitsKit.csproj --configuration Release --no-build --no-restore --output artifacts -p:PackageVersion=0.0.0-ci.${{ github.run_number }} -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
 

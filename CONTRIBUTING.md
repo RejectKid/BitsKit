@@ -14,6 +14,14 @@ dotnet test BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --no-buil
 
 If a dependency changes, run `dotnet restore BitsKit.sln --force-evaluate` and commit the updated `packages.lock.json` files.
 
+For performance work, run a focused .NET 8 and .NET 10 comparison:
+
+```powershell
+dotnet run --project BitsKit.Benchmarks/BitsKit.Benchmarks.csproj --configuration Release --framework net10.0 -- --filter "*MethodName*" --job short --runtimes net8.0 net10.0 --exporters markdown json --artifacts artifacts/benchmarks
+```
+
+Attach the generated report and environment metadata to the pull request. Results from shared GitHub-hosted runners are directional and should not be treated as stable baselines.
+
 ## Pull requests
 
 - Add tests for fixes and new behavior.
