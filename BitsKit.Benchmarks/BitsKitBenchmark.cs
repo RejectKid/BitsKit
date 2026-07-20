@@ -1,5 +1,6 @@
 ﻿namespace BitsKit.Benchmarks;
 
+[BenchmarkDotNet.Attributes.CategoriesColumn]
 public partial class BitsKitBenchmark
 {
     private const int BufferSize = 10000;

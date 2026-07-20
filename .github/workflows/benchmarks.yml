@@ -37,11 +37,11 @@ concurrency:
 
 jobs:
   benchmark:
-    name: Benchmark .NET 8 and .NET 10
+    name: Benchmark library features
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      BENCHMARK_FILTER: ${{ github.event_name == 'pull_request' && '*Read32BitLSB*' || inputs.filter || '*' }}
+      BENCHMARK_FILTER: ${{ github.event_name == 'pull_request' && '*Read32BitLSB_BitsKit' || inputs.filter || '*' }}
       BENCHMARK_JOB: ${{ github.event_name == 'pull_request' && 'Dry' || inputs.job || 'Short' }}
 
     steps:
@@ -51,9 +51,7 @@ jobs:
       - name: Install .NET SDKs
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: |
-            8.0.x
-            10.0.x
+          dotnet-version: 10.0.x
           cache: true
           cache-dependency-path: '**/packages.lock.json'
 
@@ -61,14 +59,8 @@ jobs:
         run: dotnet restore BitsKit.sln --locked-mode
 
       - name: Run benchmarks
-        run: >-
-          dotnet run --project BitsKit.Benchmarks/BitsKit.Benchmarks.csproj
-          --configuration Release --framework net10.0 --no-restore --
-          --filter "$BENCHMARK_FILTER"
-          --job "$BENCHMARK_JOB"
-          --runtimes net8.0 net10.0
-          --exporters markdown json
-          --artifacts artifacts/benchmarks
+        shell: pwsh
+        run: ./eng/Run-Benchmarks.ps1 -Filter $env:BENCHMARK_FILTER -Job $env:BENCHMARK_JOB -NoRestore
 
       - name: Add results to workflow summary
         if: success()
@@ -81,7 +73,7 @@ jobs:
 
           '# Benchmark results' | Add-Content $env:GITHUB_STEP_SUMMARY
           '' | Add-Content $env:GITHUB_STEP_SUMMARY
-          '> GitHub-hosted runners are useful for directional comparisons, not stable performance baselines.' | Add-Content $env:GITHUB_STEP_SUMMARY
+          '> These measurements describe this hosted run; use stable local hardware for regression claims.' | Add-Content $env:GITHUB_STEP_SUMMARY
           foreach ($report in $reports) {
             '' | Add-Content $env:GITHUB_STEP_SUMMARY
             Get-Content $report.FullName | Add-Content $env:GITHUB_STEP_SUMMARY

@@ -242,18 +242,18 @@ static int Decode(uint value)
 
 ## Benchmarks
 
-The [benchmark workflow](https://github.com/RejectKid/BitsKit/actions/workflows/benchmarks.yml) runs a short BenchmarkDotNet comparison of .NET 8 and .NET 10 every week and on demand. Relevant pull requests run a focused dry comparison to validate the benchmark harness. Each run includes a readable results table in its workflow summary and downloadable Markdown, JSON, logs, and environment metadata for 90 days.
+The [benchmark workflow](https://github.com/RejectKid/BitsKit/actions/workflows/benchmarks.yml) measures the library's features on .NET 10 every week and on demand. The report covers LSB/MSB bit primitives and the array-, span-, and stream-backed readers and writers across supported bit widths. Relevant pull requests run one focused dry benchmark to validate the harness. Each run includes a readable, categorized results table in its workflow summary and downloadable Markdown, JSON, logs, and environment metadata for 90 days.
 
-GitHub-hosted runners are shared infrastructure, so their results are best used for directional comparisons. Run performance investigations on stable local hardware and include the generated report with any performance-related pull request.
+The published timings show the cost of BitsKit's different operations on that hosted run. Use stable local hardware and attach its generated report when making a performance-regression claim.
 
-Run the complete comparison locally:
+Run the complete feature suite locally:
 
 ```powershell
-dotnet run --project BitsKit.Benchmarks/BitsKit.Benchmarks.csproj --configuration Release --framework net10.0 -- --filter "*" --job short --runtimes net8.0 net10.0 --exporters markdown json --artifacts artifacts/benchmarks
+./eng/Run-Benchmarks.ps1
 ```
 
 Use BenchmarkDotNet filters for a quicker focused run, for example:
 
 ```powershell
-dotnet run --project BitsKit.Benchmarks/BitsKit.Benchmarks.csproj --configuration Release --framework net10.0 -- --filter "*ReadUInt32*" --job short --runtimes net8.0 net10.0
+./eng/Run-Benchmarks.ps1 -Category BitStreamReader
 ```

@@ -10,7 +10,7 @@ Notable changes to the community-maintained fork are documented here. This proje
 - Validated, tag-driven NuGet and GitHub release automation.
 - CodeQL, Dependabot, package provenance attestations, and contribution guidance.
 - Incremental source-generator regression coverage and analyzer-based diagnostics.
-- Scheduled and on-demand .NET 8/.NET 10 benchmark reports with CI discovery validation.
+- Categorized, scheduled, and on-demand benchmark reports for the library's features, with CI discovery validation.
 
 ### Changed
 

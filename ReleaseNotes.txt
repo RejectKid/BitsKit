@@ -5,7 +5,7 @@ v1.3.0
 - Fix incremental source-generator caching and restore the BITSKIT003 diagnostic.
 - Fix inline-array setters for modern C# compiler span overload resolution.
 - Remove EOL .NET 6 and .NET 7 targets and modernize test and benchmark dependencies.
-- Add reproducible local and automated .NET 8/.NET 10 benchmark reporting.
+- Add categorized local and automated benchmark reporting for the library's features.
 
 v.1.2.0
 - Support InlineArrays.
