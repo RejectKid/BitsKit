@@ -32,6 +32,13 @@ try {
         }
     }
 
+    $unsupportedFrameworkEntries = @($entryNames | Where-Object {
+        $_ -like 'lib/net6.0/*' -or $_ -like 'lib/net7.0/*'
+    })
+    if ($unsupportedFrameworkEntries.Count -gt 0) {
+        throw "Package contains unsupported .NET 6 or .NET 7 assets: $($unsupportedFrameworkEntries -join ', ')."
+    }
+
     $nuspecEntry = $archive.Entries | Where-Object FullName -Like '*.nuspec' | Select-Object -First 1
     if ($null -eq $nuspecEntry) {
         throw 'Package does not contain a .nuspec file.'

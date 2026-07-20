@@ -13,7 +13,7 @@ namespace BitsKit.Tests;
 [TestClass]
 public class AnalyzerTests
 {
-    [DataTestMethod]
+    [TestMethod]
     [DataRow("Span<byte>")]
     [DataRow("ReadOnlySpan<byte>")]
     [DataRow("Memory<byte>")]
