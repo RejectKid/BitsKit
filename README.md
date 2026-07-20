@@ -1,5 +1,6 @@
 # BitsKit
 [![CI](https://github.com/RejectKid/BitsKit/actions/workflows/ci.yml/badge.svg)](https://github.com/RejectKid/BitsKit/actions/workflows/ci.yml)
+[![Benchmarks](https://github.com/RejectKid/BitsKit/actions/workflows/benchmarks.yml/badge.svg)](https://github.com/RejectKid/BitsKit/actions/workflows/benchmarks.yml)
 [![NuGet Version](https://img.shields.io/nuget/v/RejectKid.BitsKit)](https://www.nuget.org/packages/RejectKid.BitsKit)
 [![License](https://img.shields.io/github/license/RejectKid/BitsKit)](LICENSE.txt)
 
@@ -14,6 +15,7 @@ All features support integral and memory types, as well as targeting both, Littl
 - [Bit Fields](#bit-fields)
 - [IO Classes](#io-classes)
 - [Utility Methods](#utility-methods)
+- [Benchmarks](#benchmarks)
 
 ## Usage
 
@@ -236,4 +238,22 @@ static int Decode(uint value)
 0b11111110 0b11111111 0b00000000 0b00000001 0b00000010
 // ZigZag Encoded
 0b00000011 0b00000001 0b00000000 0b00000010 0b00000100
+```
+
+## Benchmarks
+
+The [benchmark workflow](https://github.com/RejectKid/BitsKit/actions/workflows/benchmarks.yml) runs a short BenchmarkDotNet comparison of .NET 8 and .NET 10 every week and on demand. Relevant pull requests run a focused dry comparison to validate the benchmark harness. Each run includes a readable results table in its workflow summary and downloadable Markdown, JSON, logs, and environment metadata for 90 days.
+
+GitHub-hosted runners are shared infrastructure, so their results are best used for directional comparisons. Run performance investigations on stable local hardware and include the generated report with any performance-related pull request.
+
+Run the complete comparison locally:
+
+```powershell
+dotnet run --project BitsKit.Benchmarks/BitsKit.Benchmarks.csproj --configuration Release --framework net10.0 -- --filter "*" --job short --runtimes net8.0 net10.0 --exporters markdown json --artifacts artifacts/benchmarks
+```
+
+Use BenchmarkDotNet filters for a quicker focused run, for example:
+
+```powershell
+dotnet run --project BitsKit.Benchmarks/BitsKit.Benchmarks.csproj --configuration Release --framework net10.0 -- --filter "*ReadUInt32*" --job short --runtimes net8.0 net10.0
 ```

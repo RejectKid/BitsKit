@@ -1,10 +1,6 @@
 <Project>
 
   <PropertyGroup>
-    <ParentFolderPath>$([System.IO.Directory]::GetParent($(MSBuildProjectDirectory)))</ParentFolderPath>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <VersionPrefix>1.3.0</VersionPrefix>
     <Authors>barncastle;RejectKid</Authors>
     <Description>BitsKit is a library for efficient bit-level reading and writing also adding bit field support.</Description>
@@ -17,7 +13,7 @@
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/RejectKid/BitsKit</RepositoryUrl>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(ParentFolderPath)/ReleaseNotes.txt"))</PackageReleaseNotes>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(MSBuildThisFileDirectory)ReleaseNotes.txt"))</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup>
