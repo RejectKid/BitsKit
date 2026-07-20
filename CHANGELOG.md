@@ -20,6 +20,7 @@ Notable changes to the community-maintained fork are documented here. This proje
 ### Fixed
 
 - Restored `BITSKIT003` when a memory-backed bit field omits its required `FieldType`.
+- Generate writable spans for inline-array setters so consumers compile with modern C# compilers.
 
 ## 1.2.0 - 2024-11-19
 

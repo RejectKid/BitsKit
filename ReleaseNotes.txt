@@ -3,6 +3,7 @@ v1.3.0
 - Add .NET 10 support while retaining existing library targets.
 - Add reproducible builds, dependency locking, and automated package validation.
 - Fix incremental source-generator caching and restore the BITSKIT003 diagnostic.
+- Fix inline-array setters for modern C# compiler span overload resolution.
 
 v.1.2.0
 - Support InlineArrays.

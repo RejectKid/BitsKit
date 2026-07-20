@@ -52,6 +52,9 @@ jobs:
       - name: Build
         run: dotnet build BitsKit.sln --configuration Release --no-restore
 
+      - name: Build InlineArray consumer with modern compiler
+        run: dotnet build BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --framework net10.0 --no-restore -p:LangVersion=preview
+
       - name: Test .NET 8
         run: dotnet test BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --framework net8.0 --no-build --logger "trx;LogFileName=net8-${{ runner.os }}.trx"
 
