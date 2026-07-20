@@ -1,0 +1,50 @@
+name: Bug report
+description: Report incorrect behavior or a regression.
+title: ''
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve BitsKit.
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      placeholder: 1.3.0
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Bit primitives
+        - Bit fields/source generator
+        - Readers and writers
+        - Utilities
+        - Packaging or build
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Problem
+      description: Explain what happened and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the smallest code sample that demonstrates the problem.
+      render: csharp
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include the OS, .NET SDK/runtime, target framework, and C# language version.
+    validations:
+      required: true

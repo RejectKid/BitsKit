@@ -1,0 +1,36 @@
+name: Feature request
+description: Propose an improvement to BitsKit.
+title: ''
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Bit primitives
+        - Bit fields/source generator
+        - Readers and writers
+        - Utilities
+        - Packaging or build
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Describe the limitation this would address.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API or behavior
+      description: Include example code when possible.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

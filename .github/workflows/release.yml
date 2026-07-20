@@ -1,0 +1,137 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Package version for a non-publishing dry run
+        required: true
+        default: 1.3.0-preview.1
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build release artifacts
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ('${{ github.event_name }}' -eq 'push') {
+            $version = '${{ github.ref_name }}'.Substring(1)
+          }
+          else {
+            $version = '${{ inputs.version }}'
+          }
+
+          if ($version -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$') {
+            throw "'$version' is not a valid release version."
+          }
+
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Verify tag is on master
+        if: github.event_name == 'push'
+        shell: pwsh
+        run: |
+          git fetch origin master
+          git merge-base --is-ancestor HEAD origin/master
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Release tags must point to a commit on master.'
+          }
+
+      - name: Install .NET SDKs
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Restore
+        run: dotnet restore BitsKit.sln --locked-mode
+
+      - name: Build
+        run: dotnet build BitsKit.sln --configuration Release --no-restore
+
+      - name: Test .NET 8
+        run: dotnet test BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --framework net8.0 --no-build
+
+      - name: Test .NET 10
+        run: dotnet test BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --framework net10.0 --no-build
+
+      - name: Pack
+        run: dotnet pack BitsKit/BitsKit.csproj --configuration Release --no-build --no-restore --output artifacts -p:PackageVersion=${{ steps.version.outputs.version }} -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
+
+      - name: Inspect package
+        shell: pwsh
+        run: ./eng/Validate-Package.ps1 -PackagePath ./artifacts/RejectKid.BitsKit.${{ steps.version.outputs.version }}.nupkg -ExpectedVersion ${{ steps.version.outputs.version }}
+
+      - name: Upload packages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-packages
+          path: artifacts/*.*nupkg
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attest package provenance
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: artifacts/*.*nupkg
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+  publish:
+    name: Publish release
+    if: github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-packages
+          path: artifacts
+
+      - name: Sign in to NuGet with trusted publishing
+        id: nuget
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Publish to NuGet.org
+        run: dotnet nuget push "artifacts/RejectKid.BitsKit.${{ needs.build.outputs.version }}.nupkg" --api-key "${{ steps.nuget.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" artifacts/* --verify-tag --generate-notes --title "BitsKit ${{ needs.build.outputs.version }}"

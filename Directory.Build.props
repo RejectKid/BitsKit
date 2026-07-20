@@ -5,24 +5,29 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <Version>1.2.0</Version>
-    <Authors>barncastle</Authors>
+    <VersionPrefix>1.3.0</VersionPrefix>
+    <Authors>barncastle;RejectKid</Authors>
     <Description>BitsKit is a library for efficient bit-level reading and writing also adding bit field support.</Description>
+    <PackageTitle>BitsKit (community maintained)</PackageTitle>
     <Copyright>Copyright © $([System.DateTime]::Now.ToString(yyyy)) barncastle</Copyright>
     <PackageTags>bitskit;bits;bitfield;bit-field;bitreader;bitwriter;bitstream;bitpack;bit-pack</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageProjectUrl>https://github.com/barncastle/BitsKit</PackageProjectUrl>
-    <PackageIcon></PackageIcon>
+    <PackageProjectUrl>https://github.com/RejectKid/BitsKit</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/barncastle/BitsKit</RepositoryUrl>
+    <RepositoryUrl>https://github.com/RejectKid/BitsKit</RepositoryUrl>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(ParentFolderPath)/ReleaseNotes.txt"))</PackageReleaseNotes>
   </PropertyGroup>
 
   <PropertyGroup>
     <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
+    <LangVersion>12.0</LangVersion>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
   </PropertyGroup>
 
   <ItemGroup>
