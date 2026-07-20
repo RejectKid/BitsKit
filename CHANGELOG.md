@@ -8,12 +8,18 @@ Notable changes to the community-maintained fork are documented here. This proje
 
 - Cross-platform continuous integration for .NET 8 and .NET 10.
 - Validated, tag-driven NuGet and GitHub release automation.
-- CodeQL, dependency review, Dependabot, package provenance attestations, and contribution guidance.
+- CodeQL, Dependabot, package provenance attestations, and contribution guidance.
+- Incremental source-generator regression coverage and analyzer-based diagnostics.
 
 ### Changed
 
 - Maintained packages use the `RejectKid.BitsKit` NuGet ID while retaining the `BitsKit` assembly and namespaces.
 - Builds use a pinned .NET SDK and C# 12 instead of an environment-dependent preview language version.
+- The source generator no longer retains Roslyn symbols or syntax nodes between runs.
+
+### Fixed
+
+- Restored `BITSKIT003` when a memory-backed bit field omits its required `FieldType`.
 
 ## 1.2.0 - 2024-11-19
 
