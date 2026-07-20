@@ -2,6 +2,7 @@ v1.3.0
 - Establish community-maintained releases under the RejectKid.BitsKit package ID.
 - Add .NET 10 support while retaining existing library targets.
 - Add reproducible builds, dependency locking, and automated package validation.
+- Fix incremental source-generator caching and restore the BITSKIT003 diagnostic.
 
 v.1.2.0
 - Support InlineArrays.

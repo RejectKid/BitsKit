@@ -4,23 +4,31 @@ using Microsoft.CodeAnalysis;
 
 namespace BitsKit.Generator.Models;
 
-internal abstract class BitFieldModel
+internal abstract record BitFieldModel
 {
     public string Name { get; set; } = null!;
     public BitFieldType? FieldType { get; set; }
     public string? ReturnType { get; set; }
-    public IFieldSymbol BackingField { get; set; } = null!;
-    public BackingFieldType BackingFieldType { get; set; }
+    public BackingFieldModel BackingField { get; set; } = null!;
+    public BackingFieldType BackingFieldType => BackingField.Type;
     public int BitOffset { get; set; }
     public int BitCount { get; set; }
     public BitOrder BitOrder { get; set; }
     public bool ReverseBitOrder { get; }
     public BitFieldModifiers Modifiers { get; }
-    public TypeSymbolProcessor TypeSymbol { get; }
 
-    public BitFieldModel(AttributeData attributeData, TypeSymbolProcessor typeSymbol)
+    private readonly bool _containingTypeIsStruct;
+
+    public BitFieldModel(AttributeData attributeData, TypeSymbolProcessor? typeSymbol)
     {
-        TypeSymbol = typeSymbol;
+        if (typeSymbol != null)
+        {
+            // todo: for now, analyser passes null
+            // these fields don't matter for it
+
+            _containingTypeIsStruct = typeSymbol.IsStruct;
+            BitOrder = typeSymbol.DefaultBitOrder;
+        }
 
         for (int i = 0; i < attributeData.NamedArguments.Length; i++)
         {
@@ -54,7 +62,7 @@ internal abstract class BitFieldModel
             GetPropertyTemplate(),
             accessor,
             Modifiers.HasFlag(BitFieldModifiers.Required) ? "required" : "",
-            ReturnType ?? FieldType.ToString(),
+            ReturnType ?? FieldType?.ToString(),
             Name)
           .AppendIndentedLine(2, "{");
 
@@ -64,13 +72,13 @@ internal abstract class BitFieldModel
                 GetGetterTemplate(),
                 SupportsReadOnlyGetter() ? "readonly" : "",
                 "get",
-                FieldType!.Value.ToIntegralName(),
+                FieldType?.ToIntegralName(),
                 BitOrder.ToShortName(),
                 BackingField.Name,
                 BitOffset,
                 BitCount,
                 BackingField.FixedSize,
-                BackingField.Type);
+                BackingField.TypeString);
         }
 
         // setter
@@ -80,27 +88,17 @@ internal abstract class BitFieldModel
                 GetSetterTemplate(),
                 "",
                 Modifiers.HasFlag(BitFieldModifiers.InitOnly) ? "init" : "set",
-                FieldType!.Value.ToIntegralName(),
+                FieldType?.ToIntegralName(),
                 BitOrder.ToShortName(),
                 BackingField.Name,
                 BitOffset,
                 BitCount,
                 BackingField.FixedSize,
-                BackingField.Type);
+                BackingField.TypeString);
         }
 
         sb.AppendIndentedLine(2, "}")
           .AppendLine();
-    }
-
-    /// <summary>
-    /// Diagnoses if the field will produce non-compilable or erroneous code
-    /// </summary>
-    public virtual bool HasCompilationIssues(SourceProductionContext context, TypeSymbolProcessor processor)
-    {
-        return DiagnosticValidator.HasMissingFieldType(context, this, processor.TypeSymbol.Name) |
-               DiagnosticValidator.HasConflictingAccessors(context, this, processor.TypeSymbol.Name) |
-               DiagnosticValidator.HasConflictingSetters(context, this, processor.TypeSymbol.Name);
     }
 
     /// <summary>
@@ -188,7 +186,7 @@ internal abstract class BitFieldModel
     /// </summary>
     protected bool IsReadOnly()
     {
-        string backingType = BackingField.Type.ToDisplayString();
+        string backingType = BackingField.TypeString;
 
         return BackingField.IsReadOnly ||
                backingType == "System.ReadOnlySpan<byte>" ||
@@ -202,7 +200,7 @@ internal abstract class BitFieldModel
     /// <returns></returns>
     private bool SupportsReadOnlyGetter()
     {
-        return TypeSymbol.TypeDeclaration.IsStruct() &&
+        return _containingTypeIsStruct &&
                BackingFieldType != BackingFieldType.Pointer &&
                BackingFieldType != BackingFieldType.InlineArray &&
                !IsReadOnly();

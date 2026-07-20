@@ -5,9 +5,9 @@ namespace BitsKit.Generator.Models;
 /// <summary>
 /// A model representing a boolean bit-field
 /// </summary>
-internal sealed class BooleanFieldModel : BitFieldModel
+internal sealed record BooleanFieldModel : BitFieldModel
 {
-    public BooleanFieldModel(AttributeData attributeData, TypeSymbolProcessor typeSymbol) : base(attributeData, typeSymbol)
+    public BooleanFieldModel(AttributeData attributeData, TypeSymbolProcessor? typeSymbol) : base(attributeData, typeSymbol)
     {
         switch (attributeData.ConstructorArguments.Length)
         {

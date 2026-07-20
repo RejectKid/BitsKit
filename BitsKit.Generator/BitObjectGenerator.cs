@@ -19,13 +19,10 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
                 StringConstants.BitObjectAttributeFullName,
                 predicate: IsValidTypeDeclaration,
                 transform: ProcessSyntaxNode)
-            .WithComparer(TypeSymbolProcessorComparer.Default)
-            .Where(x => x is not null)!;
+            .Where(x => x is not null)
+            .WithTrackingName("Main")!;
 
-        IncrementalValueProvider<(Compilation, ImmutableArray<TypeSymbolProcessor>)> model = context
-            .CompilationProvider
-            .Combine(typeDeclarations.Collect());
-
+        var model = typeDeclarations.Collect();
         context.RegisterSourceOutput(model, GenerateSourceCode);
     }
 
@@ -43,18 +40,18 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
             .GetAttributes()
             .Single(a => a.AttributeClass?.ToDisplayString() == StringConstants.BitObjectAttributeFullName);
 
-        return new(typeSymbol, typeDeclaration, attribute);
+        return new(typeSymbol, attribute);
     }
 
-    private static void GenerateSourceCode(SourceProductionContext context, (Compilation _, ImmutableArray<TypeSymbolProcessor> Processors) result)
+    private static void GenerateSourceCode(SourceProductionContext context, ImmutableArray<TypeSymbolProcessor> processors)
     {
-        if (result.Processors.Length == 0)
+        if (processors.Length == 0)
             return;
 
         StringBuilder stringBuilder = new(StringConstants.Header);
 
         // group the objects by their respective namespace
-        var namespaceGroups = result.Processors.GroupBy(x => x.Namespace);
+        var namespaceGroups = processors.GroupBy(x => x.Namespace);
 
         foreach (var namespaceGroup in namespaceGroups)
         {
@@ -63,20 +60,11 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
             // print the current namespace
             if (namespaceGroup.Key is not null)
                 stringBuilder
-                    .AppendLine($"namespace {namespaceGroup.Key.Name.ToFullString()}")
+                    .AppendLine($"namespace {namespaceGroup.Key}")
                     .AppendLine("{");
 
             foreach (TypeSymbolProcessor processor in namespaceGroup)
             {
-                // evaluate if there are actually any valid fields
-                if (processor.EnumerateFields() == 0)
-                    continue;
-
-                // check and report any compilation issues and prevent
-                // code generation for this type if there are
-                if (processor.ReportCompilationIssues(context))
-                    continue;
-
                 processor.GenerateCSharpSource(stringBuilder);
             }
 
@@ -93,15 +81,4 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
 
     private static bool IsValidTypeDeclaration(SyntaxNode node, CancellationToken _) =>
         node is ClassDeclarationSyntax or StructDeclarationSyntax or RecordDeclarationSyntax;
-}
-
-file class TypeSymbolProcessorComparer : IEqualityComparer<TypeSymbolProcessor?>
-{
-    public static TypeSymbolProcessorComparer Default { get; } = new();
-
-    public bool Equals(TypeSymbolProcessor? x, TypeSymbolProcessor? y) =>
-        SymbolEqualityComparer.Default.Equals(x?.TypeSymbol, y?.TypeSymbol);
-
-    public int GetHashCode(TypeSymbolProcessor? obj) =>
-        SymbolEqualityComparer.Default.GetHashCode(obj?.TypeSymbol);
 }
