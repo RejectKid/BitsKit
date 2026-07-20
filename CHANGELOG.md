@@ -26,6 +26,7 @@ Notable changes to the community-maintained fork are documented here. This proje
 - Restored `BITSKIT003` when a memory-backed bit field omits its required `FieldType`.
 - Generate writable spans for inline-array setters so consumers compile with modern C# compilers.
 - BenchmarkDotNet generated projects resolve repository metadata correctly, and failed benchmark reports now fail the process.
+- Wildcard benchmark filters remain literal when the PowerShell runner invokes BenchmarkDotNet.
 
 ## 1.2.0 - 2024-11-19
 
