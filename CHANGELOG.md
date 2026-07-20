@@ -16,6 +16,8 @@ Notable changes to the community-maintained fork are documented here. This proje
 - Maintained packages use the `RejectKid.BitsKit` NuGet ID while retaining the `BitsKit` assembly and namespaces.
 - Builds use a pinned .NET SDK and C# 12 instead of an environment-dependent preview language version.
 - The source generator no longer retains Roslyn symbols or syntax nodes between runs.
+- Library packages target `netstandard2.1`, .NET 8, and .NET 10; the EOL .NET 6 and .NET 7 assets were removed.
+- Tests and benchmarks use current MSTest, test SDK, coverage, Roslyn, analyzer, and BenchmarkDotNet packages.
 
 ### Fixed
 

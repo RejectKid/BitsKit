@@ -11,7 +11,7 @@ namespace BitsKit.Tests;
 public class WriterTests
 {
     [TestMethod]
-    [DynamicData(nameof(GetTestOffsetAndSizeParams), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(GetTestOffsetAndSizeParams))]
     public void LSBSpanMatchTest(int bitOffset, int bitSize)
     {
         Span<byte> expected = stackalloc byte[9];
@@ -51,7 +51,7 @@ public class WriterTests
     }
 
     [TestMethod]
-    [DynamicData(nameof(GetTestOffsetAndSizeParams), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(GetTestOffsetAndSizeParams))]
     public void MSBSpanMatchTest(int bitOffset, int bitSize)
     {
         Span<byte> expected = stackalloc byte[9];
@@ -91,7 +91,7 @@ public class WriterTests
     }
 
     [TestMethod]
-    [DynamicData(nameof(GetTestOffsetParams), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(GetTestOffsetParams))]
     public void LSBBitWriteTests(int bitOffset)
     {
         // write buffers
@@ -108,7 +108,7 @@ public class WriterTests
     }
 
     [TestMethod]
-    [DynamicData(nameof(GetTestOffsetParams), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(GetTestOffsetParams))]
     public void MSBBitWriteTests(int bitOffset)
     {
         // write buffers
@@ -125,7 +125,7 @@ public class WriterTests
     }
 
     [TestMethod]
-    [DynamicData(nameof(GetTestOffsetAndSizeParams), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(GetTestOffsetAndSizeParams))]
     public void LSBValueMatchTest(int bitOffset, int bitSize)
     {
         Span<byte> expected = stackalloc byte[9];
@@ -169,7 +169,7 @@ public class WriterTests
     }
 
     [TestMethod]
-    [DynamicData(nameof(GetTestOffsetAndSizeParams), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(GetTestOffsetAndSizeParams))]
     public void MSBValueMatchTest(int bitOffset, int bitSize)
     {
         Span<byte> expected = stackalloc byte[9];
@@ -217,15 +217,15 @@ public class WriterTests
     [DataRow(1)]
     public void ExceptionTests(int bitOffset)
     {
-        Assert.ThrowsException<IndexOutOfRangeException>(() => BitPrimitives.WriteBitLSB([], bitOffset, true));
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt8LSB(new byte[1], bitOffset, 1, 9 - bitOffset));
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt8MSB(new byte[1], bitOffset, 1, 9 - bitOffset));
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt16LSB(new byte[2], bitOffset, 1, 17 - bitOffset));
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt16MSB(new byte[2], bitOffset, 1, 17 - bitOffset));
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt32LSB(new byte[4], bitOffset, 1, 33 - bitOffset));
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt32MSB(new byte[4], bitOffset, 1, 33 - bitOffset));
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt64LSB(new byte[8], bitOffset, 1, 65 - bitOffset));
-        Assert.ThrowsException<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt64MSB(new byte[8], bitOffset, 1, 65 - bitOffset));
+        Assert.ThrowsExactly<IndexOutOfRangeException>(() => BitPrimitives.WriteBitLSB([], bitOffset, true));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt8LSB(new byte[1], bitOffset, 1, 9 - bitOffset));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt8MSB(new byte[1], bitOffset, 1, 9 - bitOffset));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt16LSB(new byte[2], bitOffset, 1, 17 - bitOffset));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt16MSB(new byte[2], bitOffset, 1, 17 - bitOffset));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt32LSB(new byte[4], bitOffset, 1, 33 - bitOffset));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt32MSB(new byte[4], bitOffset, 1, 33 - bitOffset));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt64LSB(new byte[8], bitOffset, 1, 65 - bitOffset));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => BitPrimitives.WriteUInt64MSB(new byte[8], bitOffset, 1, 65 - bitOffset));
     }
 
     private static IEnumerable<object[]> GetTestOffsetAndSizeParams() =>

@@ -23,8 +23,8 @@ public class GeneratorTests
             Generated02 = 0b11,
         };
 
-        Assert.AreEqual(sequentialObj.BackingField00, Expected, "SequentialBitFieldStruct.BackingField00 != Expected");
-        Assert.AreEqual(sequentialObj.BackingField01, 0, "SequentialBitFieldStruct.BackingField01 != 0");
+        Assert.AreEqual(Expected, sequentialObj.BackingField00, "SequentialBitFieldStruct.BackingField00 != Expected");
+        Assert.AreEqual(0, sequentialObj.BackingField01, "SequentialBitFieldStruct.BackingField01 != 0");
 
         ExplicitBitFieldStruct explicitObj = new()
         {
@@ -32,8 +32,8 @@ public class GeneratorTests
             Generated02 = 0b11,
         };
 
-        Assert.AreEqual(explicitObj.BackingField00, Expected, "ExplicitBitFieldStruct.BackingField00 != Expected");
-        Assert.AreEqual(explicitObj.BackingField01, (ulong)Expected, "ExplicitBitFieldStruct.BackingField00 != ExplicitBitFieldStruct.BackingField01");
+        Assert.AreEqual(Expected, explicitObj.BackingField00, "ExplicitBitFieldStruct.BackingField00 != Expected");
+        Assert.AreEqual((ulong)Expected, explicitObj.BackingField01, "ExplicitBitFieldStruct.BackingField00 != ExplicitBitFieldStruct.BackingField01");
 
         BitFieldRecordStruct recordObj = new()
         {
@@ -41,8 +41,8 @@ public class GeneratorTests
             Generated02 = 0b11,
         };
 
-        Assert.AreEqual(recordObj.BackingField00, Expected, "BitFieldRecordStruct.BackingField00 != Expected");
-        Assert.AreEqual(recordObj.BackingField01, 0, "BitFieldRecordStruct.BackingField01 != 0");
+        Assert.AreEqual(Expected, recordObj.BackingField00, "BitFieldRecordStruct.BackingField00 != Expected");
+        Assert.AreEqual(0, recordObj.BackingField01, "BitFieldRecordStruct.BackingField01 != 0");
 
         BitFieldMemoryStruct memoryObj = new()
         {
@@ -52,8 +52,8 @@ public class GeneratorTests
             Generated02 = 0b11,
         };
 
-        Assert.AreEqual(memoryObj.IntValue00, Expected, "BitFieldMemoryStruct.IntValue00 != Expected");
-        Assert.AreEqual(memoryObj.IntValue01, 0, "BitFieldMemoryStruct.IntValue01 != 0");
+        Assert.AreEqual(Expected, memoryObj.IntValue00, "BitFieldMemoryStruct.IntValue00 != Expected");
+        Assert.AreEqual(0, memoryObj.IntValue01, "BitFieldMemoryStruct.IntValue01 != 0");
 
         BitFieldRefStruct refStructObj = new()
         {
@@ -63,8 +63,8 @@ public class GeneratorTests
             Generated02 = 0b11,
         };
 
-        Assert.AreEqual(refStructObj.IntValue00, Expected, "BitFieldRefStruct.IntValue00 != Expected");
-        Assert.AreEqual(refStructObj.IntValue01, 0, "BitFieldRefStruct.IntValue01 != 0");
+        Assert.AreEqual(Expected, refStructObj.IntValue00, "BitFieldRefStruct.IntValue00 != Expected");
+        Assert.AreEqual(0, refStructObj.IntValue01, "BitFieldRefStruct.IntValue01 != 0");
 
 
         BitFieldFixedStruct fixedObj = new()
@@ -73,8 +73,8 @@ public class GeneratorTests
             Generated02 = 0b11,
         };
 
-        Assert.AreEqual(fixedObj.IntValue00, Expected, "BitFieldFixedStruct.IntValue00 != Expected");
-        Assert.AreEqual(fixedObj.BackingField01, 0, "BitFieldFixedStruct.BackingField01 != 0");
+        Assert.AreEqual(Expected, fixedObj.IntValue00, "BitFieldFixedStruct.IntValue00 != Expected");
+        Assert.AreEqual(0, fixedObj.BackingField01, "BitFieldFixedStruct.BackingField01 != 0");
 
         EnumBitFieldStruct enumObj = new()
         {
@@ -82,8 +82,8 @@ public class GeneratorTests
             Generated02 = (TestEnum)0b111,
         };
 
-        Assert.AreEqual(enumObj.BackingField00, (uint)Expected, "EnumBitFieldStruct.BackingField00 != Expected");
-        Assert.AreEqual(enumObj.BackingField01, 0u, "EnumBitFieldStruct.BackingField01 != 0");
+        Assert.AreEqual((uint)Expected, enumObj.BackingField00, "EnumBitFieldStruct.BackingField00 != Expected");
+        Assert.AreEqual(0u, enumObj.BackingField01, "EnumBitFieldStruct.BackingField01 != 0");
 
 #if NET8_0_OR_GREATER
         InlineArrayStruct inlineArrayObj = new()
@@ -94,8 +94,8 @@ public class GeneratorTests
             Generated03 = 0b11 // boundary straddling test
         };
 
-        Assert.AreEqual((uint)inlineArrayObj[0], Expected | 0x80000000, "InlineArrayStruct[0] != (Expected | 0x80000000)");
-        Assert.AreEqual(inlineArrayObj[1], 1, "InlineArrayStruct[1] != 1");
+        Assert.AreEqual(Expected | 0x80000000, (uint)inlineArrayObj[0], "InlineArrayStruct[0] != (Expected | 0x80000000)");
+        Assert.AreEqual(1, inlineArrayObj[1], "InlineArrayStruct[1] != 1");
 #endif
     }
 
@@ -111,40 +111,40 @@ public class GeneratorTests
             BackingField00 = Input
         };
 
-        Assert.AreEqual(sequentialObj.Generated01, Expected01, "SequentialBitFieldStruct.Generated01 != Expected01");
-        Assert.AreEqual(sequentialObj.Generated02, Expected02, "SequentialBitFieldStruct.Generated02 != Expected02");
+        Assert.AreEqual(Expected01, sequentialObj.Generated01, "SequentialBitFieldStruct.Generated01 != Expected01");
+        Assert.AreEqual(Expected02, sequentialObj.Generated02, "SequentialBitFieldStruct.Generated02 != Expected02");
 
         ExplicitBitFieldStruct explicitObj = new()
         {
             BackingField00 = Input
         };
 
-        Assert.AreEqual(explicitObj.Generated01, Expected01, "ExplicitBitFieldStruct.Generated01 != Expected01");
-        Assert.AreEqual(explicitObj.Generated02, Expected02, "ExplicitBitFieldStruct.Generated02 != Expected02");
+        Assert.AreEqual(Expected01, explicitObj.Generated01, "ExplicitBitFieldStruct.Generated01 != Expected01");
+        Assert.AreEqual(Expected02, explicitObj.Generated02, "ExplicitBitFieldStruct.Generated02 != Expected02");
 
         BitFieldRecordStruct recordObj = new()
         {
             BackingField00 = Input
         };
 
-        Assert.AreEqual(recordObj.Generated01, Expected01, "BitFieldRecordStruct.Generated01 != Expected01");
-        Assert.AreEqual(recordObj.Generated02, Expected02, "BitFieldRecordStruct.Generated02 != Expected02");
+        Assert.AreEqual(Expected01, recordObj.Generated01, "BitFieldRecordStruct.Generated01 != Expected01");
+        Assert.AreEqual(Expected02, recordObj.Generated02, "BitFieldRecordStruct.Generated02 != Expected02");
 
         BitFieldMemoryStruct memoryObj = new()
         {
             BackingField00 = BitConverter.GetBytes(Input)
         };
 
-        Assert.AreEqual(memoryObj.Generated01, Expected01, "BitFieldMemoryStruct.Generated01 != Expected01");
-        Assert.AreEqual(memoryObj.Generated02, Expected02, "BitFieldMemoryStruct.Generated02 != Expected02");
+        Assert.AreEqual(Expected01, memoryObj.Generated01, "BitFieldMemoryStruct.Generated01 != Expected01");
+        Assert.AreEqual(Expected02, memoryObj.Generated02, "BitFieldMemoryStruct.Generated02 != Expected02");
 
         BitFieldRefStruct refStructObj = new()
         {
             BackingField00 = BitConverter.GetBytes(Input)
         };
 
-        Assert.AreEqual(refStructObj.Generated01, Expected01, "BitFieldRefStruct.Generated01 != Expected01");
-        Assert.AreEqual(refStructObj.Generated02, Expected02, "BitFieldRefStruct.Generated02 != Expected02");
+        Assert.AreEqual(Expected01, refStructObj.Generated01, "BitFieldRefStruct.Generated01 != Expected01");
+        Assert.AreEqual(Expected02, refStructObj.Generated02, "BitFieldRefStruct.Generated02 != Expected02");
 
 
         BitFieldFixedStruct fixedObj = new()
@@ -152,24 +152,24 @@ public class GeneratorTests
             IntValue00 = Input
         };
 
-        Assert.AreEqual(fixedObj.Generated01, Expected01, "BitFieldFixedStruct.Generated01 != Expected01");
-        Assert.AreEqual(fixedObj.Generated02, Expected02, "BitFieldFixedStruct.Generated02 != Expected02");
+        Assert.AreEqual(Expected01, fixedObj.Generated01, "BitFieldFixedStruct.Generated01 != Expected01");
+        Assert.AreEqual(Expected02, fixedObj.Generated02, "BitFieldFixedStruct.Generated02 != Expected02");
 
         EnumBitFieldStruct enumObj = new()
         {
             BackingField00 = Input
         };
 
-        Assert.AreEqual(enumObj.Generated01, TestEnum.B, "EnumBitFieldStruct.Generated01 != B");
-        Assert.AreEqual(enumObj.Generated02, TestEnum.A | TestEnum.B, "EnumBitFieldStruct.Generated02 != (A | B)");
+        Assert.AreEqual(TestEnum.B, enumObj.Generated01, "EnumBitFieldStruct.Generated01 != B");
+        Assert.AreEqual(TestEnum.A | TestEnum.B, enumObj.Generated02, "EnumBitFieldStruct.Generated02 != (A | B)");
 
 #if NET8_0_OR_GREATER
         InlineArrayStruct inlineArrayObj = new();
         inlineArrayObj[0] = Input;
 
-        Assert.AreEqual(inlineArrayObj.Generated01, Expected01, "InlineArrayStruct.Generated01 != Expected01");
-        Assert.AreEqual(inlineArrayObj.Generated02, Expected02, "InlineArrayStruct.Generated02 != Expected02");
-        Assert.AreEqual(inlineArrayObj.Generated03, 0, "InlineArrayStruct.Generated03 != 0");
+        Assert.AreEqual(Expected01, inlineArrayObj.Generated01, "InlineArrayStruct.Generated01 != Expected01");
+        Assert.AreEqual(Expected02, inlineArrayObj.Generated02, "InlineArrayStruct.Generated02 != Expected02");
+        Assert.AreEqual(0, inlineArrayObj.Generated03, "InlineArrayStruct.Generated03 != 0");
 #endif
     }
 
@@ -191,7 +191,7 @@ public class GeneratorTests
             Generated03 = TestEnum.A | TestEnum.B,
         };
 
-        Assert.AreEqual(obj.BackingField00, ExpectedA);
+        Assert.AreEqual(ExpectedA, obj.BackingField00);
 
         // fill the backing field to test setters
         obj.BackingField00 = 0b111111111111;
@@ -201,7 +201,7 @@ public class GeneratorTests
         obj.Generated02 = false;
         obj.Generated03 = 0;
 
-        Assert.AreEqual(obj.BackingField00, ExpectedB);
+        Assert.AreEqual(ExpectedB, obj.BackingField00);
     }
 
     [TestMethod]
@@ -215,12 +215,12 @@ public class GeneratorTests
             Generated01 = TestEnum.A | TestEnum.B | TestEnum.C
         };
 
-        Assert.AreEqual(obj.Generated01, Expected);
+        Assert.AreEqual(Expected, obj.Generated01);
 
         obj.BackingField00 = 0b11111111;
 
-        Assert.AreEqual(obj.Generated01, Expected);
-        Assert.AreEqual(obj.Generated02, Expected);
+        Assert.AreEqual(Expected, obj.Generated01);
+        Assert.AreEqual(Expected, obj.Generated02);
     }
 
     [TestMethod]
@@ -817,13 +817,13 @@ public class GeneratorTests
         }
         AssertGeneratorDidntRun(run2Result.Results[0].TrackedSteps["Main"]);
 
-        Assert.AreEqual(run1Result.GeneratedTrees.Length, 1);
+        Assert.AreEqual(1, run1Result.GeneratedTrees.Length);
         Assert.IsTrue(run1Result.Diagnostics.IsEmpty);
 
         GeneratorRunResult generatorResult = run1Result.Results[0];
-        Assert.AreEqual(generatorResult.Generator.GetGeneratorType(), typeof(BitObjectGenerator));
+        Assert.AreEqual(typeof(BitObjectGenerator), generatorResult.Generator.GetGeneratorType());
         Assert.IsTrue(generatorResult.Diagnostics.IsEmpty);
-        Assert.AreEqual(generatorResult.GeneratedSources.Length, 1);
+        Assert.AreEqual(1, generatorResult.GeneratedSources.Length);
         Assert.IsTrue(generatorResult.Exception is null);
 
         string sourceOutput = generatorResult.GeneratedSources[0].SourceText.ToString();

@@ -287,7 +287,7 @@ public class IO_WriterTests
         CollectionAssert.AreEqual(expected, ms.GetBuffer((int)ms.Length), "BitStreamWriter");
 
         // check we can't seek or buffer
-        Assert.ThrowsException<NotSupportedException>(() => bitStreamWriter.Position = 0);
+        Assert.ThrowsExactly<NotSupportedException>(() => bitStreamWriter.Position = 0);
     }
 
     [TestMethod]
@@ -324,6 +324,6 @@ public class IO_WriterTests
         CollectionAssert.AreEqual(expected, ms.GetBuffer((int)ms.Length), "BitStreamWriter");
 
         // check we can't seek or buffer
-        Assert.ThrowsException<NotSupportedException>(() => bitStreamWriter.Position = 0);
+        Assert.ThrowsExactly<NotSupportedException>(() => bitStreamWriter.Position = 0);
     }
 }

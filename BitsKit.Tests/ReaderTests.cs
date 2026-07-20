@@ -14,7 +14,7 @@ public class ReaderTests
     ];
 
     [TestMethod]
-    [DynamicData(nameof(GetTestOffsetAndSizeParams), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(GetTestOffsetAndSizeParams))]
     public void LSBSpanMatchTest(int bitOffset, int bitSize)
     {
         ulong expected = Helpers.ReadBitsLSB(Data, bitOffset, bitSize);
@@ -31,7 +31,7 @@ public class ReaderTests
     }
 
     [TestMethod]
-    [DynamicData(nameof(GetTestOffsetAndSizeParams), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(GetTestOffsetAndSizeParams))]
     public void MSBSpanMatchTest(int bitOffset, int bitSize)
     {
         ulong expected = Helpers.ReadBitsMSB(Data, bitOffset, bitSize);
@@ -48,7 +48,7 @@ public class ReaderTests
     }
 
     [TestMethod]
-    [DynamicData(nameof(GetTestOffsetParams), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(GetTestOffsetParams))]
     public void LSBBitReadTests(int bitOffset)
     {
         bool targetBit = Helpers.ReadBitsLSB(Data, bitOffset, 1) == 1;
@@ -58,7 +58,7 @@ public class ReaderTests
     }
 
     [TestMethod]
-    [DynamicData(nameof(GetTestOffsetParams), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(GetTestOffsetParams))]
     public void MSBBitReadTests(int bitOffset)
     {
         bool targetBit = Helpers.ReadBitsMSB(Data, bitOffset, 1) == 1;
@@ -68,7 +68,7 @@ public class ReaderTests
     }
 
     [TestMethod]
-    [DynamicData(nameof(GetTestOffsetAndSizeParams), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(GetTestOffsetAndSizeParams))]
     public void LSBValueMatchTest(int bitOffset, int bitSize)
     {
         ulong expected = Helpers.ReadBitsLSB(Data, bitOffset, bitSize);
@@ -90,7 +90,7 @@ public class ReaderTests
     }
 
     [TestMethod]
-    [DynamicData(nameof(GetTestOffsetAndSizeParams), DynamicDataSourceType.Method)]
+    [DynamicData(nameof(GetTestOffsetAndSizeParams))]
     public void MSBValueMatchTest(int bitOffset, int bitSize)
     {
         ulong expected = Helpers.ReadBitsMSB(Data, bitOffset, bitSize);
