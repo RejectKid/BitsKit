@@ -228,3 +228,6 @@ AppPackages/
 # Dev Classes
 /BitsKit.Benchmarks/DevBenchmark.cs
 /BitsKit.Tests/DevTests.cs
+
+# Local package output
+/artifacts/

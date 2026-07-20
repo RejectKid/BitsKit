@@ -1,5 +1,9 @@
 # BitsKit
-[![NuGet Version](https://img.shields.io/nuget/v/BitsKit)](https://www.nuget.org/packages/BitsKit)
+[![CI](https://github.com/RejectKid/BitsKit/actions/workflows/ci.yml/badge.svg)](https://github.com/RejectKid/BitsKit/actions/workflows/ci.yml)
+[![NuGet Version](https://img.shields.io/nuget/v/RejectKid.BitsKit)](https://www.nuget.org/packages/RejectKid.BitsKit)
+[![License](https://img.shields.io/github/license/RejectKid/BitsKit)](LICENSE.txt)
+
+This is the community-maintained fork of [barncastle/BitsKit](https://github.com/barncastle/BitsKit). The assembly and namespaces remain `BitsKit`; maintained NuGet releases use the package ID `RejectKid.BitsKit`.
 
 BitsKit is a lightweight C# library that provides efficient bit-level reading, writing and manipulation. As well as adding bit-field support to C#, not dissimilar to [C/C++ languages](https://en.cppreference.com/w/cpp/language/bit_field).
 
