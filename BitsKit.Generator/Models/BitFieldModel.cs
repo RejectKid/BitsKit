@@ -177,7 +177,7 @@ internal abstract record BitFieldModel
         BackingFieldType.Memory => "{4}.Span",
         BackingFieldType.Span => "{4}",
         BackingFieldType.Pointer => "MemoryMarshal.CreateSpan(ref {4}[0], {7})",
-        BackingFieldType.InlineArray => "MemoryMarshal.AsBytes<{8}>(this)",
+        BackingFieldType.InlineArray => "MemoryMarshal.AsBytes((Span<{8}>)this)",
         _ => throw new NotSupportedException()
     };
 
