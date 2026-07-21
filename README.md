@@ -188,7 +188,8 @@ There are a number of IO types available under the `BitsKit.IO` namespace built 
 - The array and span backed types support up to `int.MaxValue` bits as they use a signed integer for positioning to boost performance. This limits the source to being less than 0x10000000 bytes.
 - `BitStreamReader` uses a pooled read-ahead buffer for sequential reads. When it is disposed with `leaveOpen: true`, the underlying seekable stream position is restored to the reader's logical bit position, rounded up to the next byte.
 - `BitStreamReader` throws `EndOfStreamException` when the source cannot supply all the bits requested by an operation.
-- `BitStreamWriter` requires a seekable destination. Writing in-place also requires the destination to be readable so its existing data can be preserved.
+- `BitStreamWriter` supports sequential output to forward-only streams. For non-seekable destinations, `Position` and `Length` are relative to the bytes written through the writer, while seeking is unavailable.
+- Seeking and writing in-place require a seekable destination. In-place writes also require it to be readable so existing data can be preserved.
 - `BitStreamWriter` buffers sequential output. Call `Flush` (or dispose the writer) before reading the new data directly from the underlying stream.
 
 ### Utility Methods

@@ -7,8 +7,8 @@ namespace BitsKit.IO;
 /// A writer for packing bits into a stream
 /// <remarks>
 /// <para>
-/// Note: Writing mid-stream bits requires the source
-/// stream to be readable to allow buffering
+/// Sequential writes support forward-only streams. Seeking requires a seekable
+/// stream, and writing in-place also requires it to be readable.
 /// </para> 
 /// </remarks>
 /// </summary>
@@ -20,7 +20,8 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
         get
         {
             ThrowIfDisposed();
-            return ((_stream.Position + _writeBufferLength) << 3) + _bitsPos;
+            long bytePosition = _isSeekable ? _stream.Position : _forwardOnlyBytePosition;
+            return ((bytePosition + _writeBufferLength) << 3) + _bitsPos;
         }
         set => SetPosition(value);
     }
@@ -31,6 +32,10 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
         get
         {
             ThrowIfDisposed();
+
+            if (!_isSeekable)
+                return (_forwardOnlyBytePosition + _writeBufferLength) << 3;
+
             return Math.Max(_stream.Length, _stream.Position + _writeBufferLength) << 3;
         }
     }
@@ -40,10 +45,12 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
     private Stream _stream;
     private byte[] _writeBuffer;
     private int _writeBufferLength;
+    private long _forwardOnlyBytePosition;
     private byte _buffer;
     private int _bitsPos;
 
     private readonly bool _leaveOpen;
+    private readonly bool _isSeekable;
     private bool _disposed;
 
     /// <summary>
@@ -62,7 +69,7 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
     /// <param name="source"></param>
     /// <param name="leaveOpen"></param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> is null.</exception>
-    /// <exception cref="NotSupportedException">Thrown when <paramref name="source"/> does not support writing or seeking.</exception>
+    /// <exception cref="NotSupportedException">Thrown when <paramref name="source"/> does not support writing.</exception>
     public BitStreamWriter(Stream source, bool leaveOpen)
     {
         if (source is null)
@@ -71,11 +78,9 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
         if (!source.CanWrite)
             throw new NotSupportedException("Stream does not support writing.");
 
-        if (!source.CanSeek)
-            throw new NotSupportedException("Stream does not support seeking.");
-
         _stream = source;
         _leaveOpen = leaveOpen;
+        _isSeekable = source.CanSeek;
 
         ResetBuffer();
         _writeBuffer = ArrayPool<byte>.Shared.Rent(BufferSize);
@@ -84,6 +89,9 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
     /// <inheritdoc cref="IBitStream.Seek"/>
     public long Seek(long offset, SeekOrigin origin)
     {
+        ThrowIfDisposed();
+        EnsureSeekable();
+
         return Position = origin switch
         {
             SeekOrigin.Begin => offset,
@@ -107,6 +115,10 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
         if (_bitsPos != 0)
         {
             _stream.WriteByte(_buffer);
+
+            if (!_isSeekable)
+                _forwardOnlyBytePosition++;
+
             _bitsPos = 0;
             ResetBuffer();
         }
@@ -477,7 +489,7 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
         _buffer = 0;
 
         // if this is mid-stream, buffer the next byte
-        if (_writeBufferLength == 0 && _stream.Position < _stream.Length)
+        if (_isSeekable && _writeBufferLength == 0 && _stream.Position < _stream.Length)
         {
             EnsureReadableForInPlaceWrite();
 
@@ -498,7 +510,7 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
 
         // if this is a mid-stream write then populate the buffer
         // with the existing data to allow writing in-place
-        if (_writeBufferLength == 0 && _stream.Position < _stream.Length)
+        if (_isSeekable && _writeBufferLength == 0 && _stream.Position < _stream.Length)
         {
             EnsureReadableForInPlaceWrite();
 
@@ -542,7 +554,7 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
         get
         {
             ThrowIfDisposed();
-            return _writeBufferLength != 0 || _stream.Position >= _stream.Length;
+            return !_isSeekable || _writeBufferLength != 0 || _stream.Position >= _stream.Length;
         }
     }
 
@@ -579,6 +591,7 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
     private void SetPosition(long position)
     {
         ThrowIfDisposed();
+        EnsureSeekable();
 
         if (position < 0)
             IBitStream.ThrowNegativePositionException();
@@ -608,6 +621,10 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
             return;
 
         _stream.Write(_writeBuffer.AsSpan(0, _writeBufferLength));
+
+        if (!_isSeekable)
+            _forwardOnlyBytePosition += _writeBufferLength;
+
         _writeBufferLength = 0;
     }
 
@@ -627,6 +644,12 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
     {
         if (!_stream.CanRead)
             throw new NotSupportedException("Writing within existing stream data requires a readable stream.");
+    }
+
+    private void EnsureSeekable()
+    {
+        if (!_isSeekable)
+            throw new NotSupportedException("Stream does not support seeking.");
     }
 
     private void ThrowIfDisposed()
