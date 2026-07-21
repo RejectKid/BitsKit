@@ -23,6 +23,23 @@ internal sealed class CountingReadMemoryStream(byte[] buffer) : MemoryStream(buf
     }
 }
 
+internal sealed class CountingWriteMemoryStream : MemoryStream
+{
+    public int WriteCount { get; private set; }
+
+    public override void Write(ReadOnlySpan<byte> buffer)
+    {
+        WriteCount++;
+        base.Write(buffer);
+    }
+
+    public override void WriteByte(byte value)
+    {
+        WriteCount++;
+        base.WriteByte(value);
+    }
+}
+
 internal sealed class NonSeekableWriteStream : MemoryStream
 {
     public override bool CanSeek => false;

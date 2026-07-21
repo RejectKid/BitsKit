@@ -272,13 +272,8 @@ public class IO_WriterTests
 
             bitOffset += bitCount;
 
-            // BitStreamWriter buffers partially written bytes
-            // so only comparing the number of whole bytes written
-            int byteCount = bitOffset >> 3;
-
-            CollectionAssert.AreEqual(expected[..byteCount], ms.GetBuffer(byteCount), "BitStreamWriter");
-
             Assert.AreEqual(bitOffset, bitStreamWriter.Position, "BitStreamWriter.Position");
+            Assert.AreEqual(bitOffset & ~7, bitStreamWriter.Length, "BitStreamWriter.Length");
         }
 
         // write remaining bits to stream
@@ -309,13 +304,8 @@ public class IO_WriterTests
 
             bitOffset += bitCount;
 
-            // BitStreamWriter buffers partially written bytes
-            // so only comparing the number of whole bytes written
-            int byteCount = bitOffset >> 3;
-
-            CollectionAssert.AreEqual(expected[..byteCount], ms.GetBuffer(byteCount), "BitStreamWriter");
-
             Assert.AreEqual(bitOffset, bitStreamWriter.Position, "BitStreamWriter.Position");
+            Assert.AreEqual(bitOffset & ~7, bitStreamWriter.Length, "BitStreamWriter.Length");
         }
 
         // write remaining bits to stream
@@ -361,6 +351,109 @@ public class IO_WriterTests
         writer.Flush();
 
         CollectionAssert.AreEqual(expected, stream.ToArray());
+    }
+
+    [TestMethod]
+    public void SequentialWritesUseOutputBuffer()
+    {
+        using CountingWriteMemoryStream stream = new();
+        using BitStreamWriter writer = new(stream, true);
+
+        for (int i = 0; i < 1024; i++)
+            writer.WriteUInt8LSB((byte)i, 8);
+
+        Assert.AreEqual(0, stream.WriteCount);
+        Assert.AreEqual(0, stream.Length);
+        Assert.AreEqual(8192, writer.Position);
+        Assert.AreEqual(8192, writer.Length);
+
+        writer.Flush();
+
+        Assert.AreEqual(1, stream.WriteCount);
+        Assert.AreEqual(1024, stream.Length);
+    }
+
+    [TestMethod]
+    public void WritesAcrossMultipleOutputBuffers()
+    {
+        byte[] expected = new byte[8201];
+        for (int i = 0; i < expected.Length; i++)
+            expected[i] = (byte)i;
+
+        using CountingWriteMemoryStream stream = new();
+        using BitStreamWriter writer = new(stream, true);
+
+        foreach (byte value in expected)
+            writer.WriteUInt8LSB(value, 8);
+
+        writer.Flush();
+
+        Assert.AreEqual(3, stream.WriteCount);
+        CollectionAssert.AreEqual(expected, stream.ToArray());
+    }
+
+    [TestMethod]
+    public void SeekingFlushesPendingOutputBeforeInPlaceWrite()
+    {
+        byte[] expected = new byte[5000];
+        using MemoryStream stream = new();
+        using BitStreamWriter writer = new(stream, true);
+
+        for (int i = 0; i < expected.Length; i++)
+            writer.WriteUInt8LSB(0, 8);
+
+        const int bitOffset = (100 * 8) + 3;
+        Helpers.WriteBitsLSB(expected, bitOffset, 1, 1);
+        writer.Position = bitOffset;
+        writer.WriteBitLSB(true);
+        writer.Flush();
+
+        CollectionAssert.AreEqual(expected, stream.ToArray());
+    }
+
+    [TestMethod]
+    public void RandomizedUnalignedWritesMatchAcrossOutputBuffers()
+    {
+        byte[] expected = new byte[8201];
+        Random random = new(0xB175);
+        using MemoryStream stream = new();
+        using BitStreamWriter writer = new(stream, true);
+        int bitOffset = 0;
+
+        while (bitOffset < expected.Length * 8)
+        {
+            int bitCount = Math.Min(random.Next(1, 65), (expected.Length * 8) - bitOffset);
+            ulong value = ((ulong)(uint)random.Next() << 32) | (uint)random.Next();
+
+            if ((bitOffset & 1) == 0)
+            {
+                Helpers.WriteBitsLSB(expected, bitOffset, value, bitCount);
+                writer.WriteUInt64LSB(value, bitCount);
+            }
+            else
+            {
+                Helpers.WriteBitsMSB(expected, bitOffset, value, bitCount);
+                writer.WriteUInt64MSB(value, bitCount);
+            }
+
+            bitOffset += bitCount;
+        }
+
+        writer.Flush();
+
+        Assert.AreEqual(bitOffset, writer.Position);
+        CollectionAssert.AreEqual(expected, stream.ToArray());
+    }
+
+    [TestMethod]
+    public void DisposeFlushesPendingOutputAndLeavesStreamOpen()
+    {
+        using MemoryStream stream = new();
+        using (BitStreamWriter writer = new(stream, true))
+            writer.WriteUInt16LSB(0xA5CD, 16);
+
+        CollectionAssert.AreEqual(new byte[] { 0xCD, 0xA5 }, stream.ToArray());
+        Assert.IsTrue(stream.CanWrite);
     }
 
     [TestMethod]
