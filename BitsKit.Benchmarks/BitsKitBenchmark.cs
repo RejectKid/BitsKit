@@ -1,6 +1,7 @@
 ﻿namespace BitsKit.Benchmarks;
 
 [BenchmarkDotNet.Attributes.CategoriesColumn]
+[BenchmarkDotNet.Attributes.MemoryDiagnoser]
 public partial class BitsKitBenchmark
 {
     private const int BufferSize = 10000;

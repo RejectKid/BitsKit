@@ -4,6 +4,10 @@ Notable changes to the community-maintained fork are documented here. This proje
 
 ## Unreleased
 
+### Changed
+
+- `BitStreamReader` now uses pooled read-ahead buffering to reduce stream calls during sequential reads and supports seeking within buffered data.
+
 ### Fixed
 
 - Stream reads now handle partial `Stream.Read` results and throw `EndOfStreamException` instead of returning stale data when the source ends early.

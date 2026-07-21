@@ -11,8 +11,8 @@ public partial class BitsKitBenchmark
     public int BitStreamReaderBit()
     {
         var maxNumIterations = BufferSize;
-        var stream = new MemoryStream(ReadBuffer);
-        var reader = new BitStreamReader(stream);
+        using var stream = new MemoryStream(ReadBuffer);
+        using var reader = new BitStreamReader(stream);
 
         for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
         {
@@ -34,8 +34,8 @@ public partial class BitsKitBenchmark
     {
         const int bitCount = 4;
         int maxNumIterations = BufferSize / bitCount;
-        var stream = new MemoryStream(ReadBuffer);
-        var reader = new BitStreamReader(stream);
+        using var stream = new MemoryStream(ReadBuffer);
+        using var reader = new BitStreamReader(stream);
 
         for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
         {
@@ -58,8 +58,8 @@ public partial class BitsKitBenchmark
     {
         const int bitCount = 8;
         int maxNumIterations = BufferSize / bitCount;
-        var stream = new MemoryStream(ReadBuffer);
-        var reader = new BitStreamReader(stream);
+        using var stream = new MemoryStream(ReadBuffer);
+        using var reader = new BitStreamReader(stream);
 
         for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
         {
@@ -82,8 +82,8 @@ public partial class BitsKitBenchmark
     {
         const int bitCount = 16;
         int maxNumIterations = BufferSize / bitCount;
-        var stream = new MemoryStream(ReadBuffer);
-        var reader = new BitStreamReader(stream);
+        using var stream = new MemoryStream(ReadBuffer);
+        using var reader = new BitStreamReader(stream);
 
         for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
         {
@@ -106,8 +106,33 @@ public partial class BitsKitBenchmark
     {
         const int bitCount = 32;
         int maxNumIterations = BufferSize / bitCount;
-        var stream = new MemoryStream(ReadBuffer);
-        var reader = new BitStreamReader(stream);
+        using var stream = new MemoryStream(ReadBuffer);
+        using var reader = new BitStreamReader(stream);
+
+        for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
+        {
+            _ = reader.ReadUInt32MSB(bitCount);
+            _ = reader.ReadUInt32MSB(bitCount);
+            _ = reader.ReadUInt32MSB(bitCount);
+            _ = reader.ReadUInt32MSB(bitCount);
+            _ = reader.ReadUInt32MSB(bitCount);
+            _ = reader.ReadUInt32MSB(bitCount);
+            _ = reader.ReadUInt32MSB(bitCount);
+            _ = reader.ReadUInt32MSB(bitCount);
+        }
+
+        return 0;
+    }
+
+    [Benchmark]
+    [BenchmarkCategory("BitStreamReader", "UInt32", "Unaligned")]
+    public int BitStreamReaderUInt32Unaligned()
+    {
+        const int bitCount = 32;
+        int maxNumIterations = BufferSize / bitCount;
+        using var stream = new MemoryStream(ReadBuffer);
+        using var reader = new BitStreamReader(stream);
+        _ = reader.ReadBitMSB();
 
         for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
         {
@@ -130,8 +155,8 @@ public partial class BitsKitBenchmark
     {
         const int bitCount = 64;
         int maxNumIterations = BufferSize / bitCount;
-        var stream = new MemoryStream(ReadBuffer);
-        var reader = new BitStreamReader(stream);
+        using var stream = new MemoryStream(ReadBuffer);
+        using var reader = new BitStreamReader(stream);
 
         for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
         {
