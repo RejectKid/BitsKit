@@ -50,6 +50,9 @@ internal sealed record IntegralFieldModel : BitFieldModel
 
     protected override string GetSetterTemplate()
     {
+        if (TryGetDirectIntegralWriteExpression("value", out string expression))
+            return "{0} {1} => " + expression + ";";
+
         if (IsTypeCast)
             return string.Format(StringConstants.ExplicitSetterTemplate, SetterSource(), FieldType);
 

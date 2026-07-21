@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\BitsKit.Tests\BitsKit.Tests.csproj" />
     <ProjectReference Include="..\BitsKit\BitsKit.csproj" />
+    <ProjectReference Include="..\BitsKit.Generator\BitsKit.Generator.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
   </ItemGroup>
 
 </Project>

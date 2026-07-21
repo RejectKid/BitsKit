@@ -182,3 +182,38 @@ public enum TestEnum
     B = 2,
     C = 4,
 }
+
+[BitObject(BitOrder.LeastSignificant)]
+public partial struct OptimizedIntegralAccessorStruct
+{
+    [BitField(2)]
+    [BitField("ByteValue", 5)]
+    public byte ByteBacking;
+
+    [BitField(3)]
+    [BitField("ShortValue", 9)]
+    public short ShortBacking;
+
+    [BitField(5)]
+    [BitField("IntValue", 11)]
+    public int IntBacking;
+
+    [BitField(5)]
+    [BitField("ReversedIntValue", 11, ReverseBitOrder = true)]
+    public int ReversedIntBacking;
+
+    [BitField("FullUInt64Value", 64)]
+    public ulong UInt64Backing;
+
+    [BitField(7)]
+    [BitField("ReversedUInt64Value", 43, ReverseBitOrder = true)]
+    public ulong ReversedUInt64Backing;
+
+    [BitField(5)]
+    [BooleanField("Flag")]
+    public uint BooleanBacking;
+
+    [BitField(5)]
+    [EnumField("EnumValue", 2, typeof(TestEnum))]
+    public uint EnumBacking;
+}
