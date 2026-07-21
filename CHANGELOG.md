@@ -7,6 +7,7 @@ Notable changes to the community-maintained fork are documented here. This proje
 ### Changed
 
 - `BitStreamReader` now uses pooled read-ahead buffering to reduce stream calls during sequential reads and supports seeking within buffered data.
+- `BitStreamWriter` now encodes sequential writes directly into a pooled output buffer, reducing calls to the underlying stream while retaining in-place write behavior.
 
 ### Fixed
 

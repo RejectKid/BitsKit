@@ -12,8 +12,8 @@ public partial class BitsKitBenchmark
     public int BitStreamWriterBit()
     {
         var maxNumIterations = BufferSize;
-        var stream = new MemoryStream(BufferSize);
-        var writer = new BitStreamWriter(stream);
+        using var stream = new MemoryStream(BufferSize);
+        using var writer = new BitStreamWriter(stream);
 
         for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
         {
@@ -35,8 +35,8 @@ public partial class BitsKitBenchmark
     {
         const int bitCount = 4;
         int maxNumIterations = BufferSize / bitCount;
-        var stream = new MemoryStream(BufferSize);
-        var writer = new BitStreamWriter(stream);
+        using var stream = new MemoryStream(BufferSize);
+        using var writer = new BitStreamWriter(stream);
 
         for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
         {
@@ -59,8 +59,8 @@ public partial class BitsKitBenchmark
     {
         const int bitCount = 8;
         int maxNumIterations = BufferSize / bitCount;
-        var stream = new MemoryStream(BufferSize);
-        var writer = new BitStreamWriter(stream);
+        using var stream = new MemoryStream(BufferSize);
+        using var writer = new BitStreamWriter(stream);
 
         for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
         {
@@ -83,8 +83,8 @@ public partial class BitsKitBenchmark
     {
         const int bitCount = 16;
         int maxNumIterations = BufferSize / bitCount;
-        var stream = new MemoryStream(BufferSize);
-        var writer = new BitStreamWriter(stream);
+        using var stream = new MemoryStream(BufferSize);
+        using var writer = new BitStreamWriter(stream);
 
         for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
         {
@@ -102,13 +102,13 @@ public partial class BitsKitBenchmark
     }
 
     [Benchmark]
-    [BenchmarkCategory("BitStreamWriter", "UInt32")]
+    [BenchmarkCategory("BitStreamWriter", "UInt32", "Unaligned")]
     public int BitStreamWriterUInt32()
     {
         const int bitCount = 32;
         int maxNumIterations = BufferSize / bitCount;
-        var stream = new MemoryStream(BufferSize);
-        var writer = new BitStreamWriter(stream);
+        using var stream = new MemoryStream(BufferSize);
+        using var writer = new BitStreamWriter(stream);
 
         for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
         {
@@ -120,6 +120,30 @@ public partial class BitsKitBenchmark
             writer.WriteUInt32MSB((uint)numIterations, 32);
             writer.WriteUInt32MSB((uint)numIterations, 31);
             writer.WriteUInt32MSB((uint)numIterations, 32);
+        }
+
+        return 0;
+    }
+
+    [Benchmark]
+    [BenchmarkCategory("BitStreamWriter", "UInt32", "Aligned")]
+    public int BitStreamWriterUInt32Aligned()
+    {
+        const int bitCount = 32;
+        int maxNumIterations = BufferSize / bitCount;
+        using var stream = new MemoryStream(BufferSize);
+        using var writer = new BitStreamWriter(stream);
+
+        for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
+        {
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
         }
 
         return 0;
@@ -131,8 +155,8 @@ public partial class BitsKitBenchmark
     {
         const int bitCount = 64;
         int maxNumIterations = BufferSize / bitCount;
-        var stream = new MemoryStream(BufferSize);
-        var writer = new BitStreamWriter(stream);
+        using var stream = new MemoryStream(BufferSize);
+        using var writer = new BitStreamWriter(stream);
 
         for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
         {
