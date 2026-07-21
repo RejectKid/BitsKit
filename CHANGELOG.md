@@ -12,7 +12,7 @@ Notable changes to the community-maintained fork are documented here. This proje
 ### Changed
 
 - Integral-backed LSB and MSB generated getters now emit specialized mask-and-shift expressions instead of calling the general-purpose bit primitives.
-- The source generator emits direct mask-and-shift setters for valid fixed-width, least-significant scalar fields, while retaining `BitPrimitives` for memory-backed, native-integer, reversed-order, and invalid-range cases.
+- The source generator emits direct mask-and-shift setters for valid fixed-width LSB and MSB scalar fields, while retaining `BitPrimitives` for memory-backed, native-integer, and invalid-range cases.
 - Sequential `BitStreamReader` and `BitStreamWriter` single-bit operations use dedicated buffered fast paths while preserving existing seeking, EOF, and non-seekable-stream behavior.
 
 ### Fixed

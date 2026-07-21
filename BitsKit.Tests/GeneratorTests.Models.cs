@@ -190,9 +190,20 @@ public partial struct OptimizedIntegralAccessorStruct
     [BitField("ByteValue", 5)]
     public byte ByteBacking;
 
+    [BitField(2)]
+    [BitField("ReversedByteValue", 5, ReverseBitOrder = true)]
+    public byte ReversedByteBacking;
+
+    [BitField("ReversedFullByteValue", 8, ReverseBitOrder = true)]
+    public byte ReversedFullByteBacking;
+
     [BitField(3)]
     [BitField("ShortValue", 9)]
     public short ShortBacking;
+
+    [BitField(3)]
+    [BitField("ReversedShortValue", 9, ReverseBitOrder = true)]
+    public short ReversedShortBacking;
 
     [BitField(5)]
     [BitField("IntValue", 11)]
@@ -209,6 +220,9 @@ public partial struct OptimizedIntegralAccessorStruct
     [BitField("ReversedUInt64Value", 43, ReverseBitOrder = true)]
     public ulong ReversedUInt64Backing;
 
+    [BitField("ReversedFullUInt64Value", 64, ReverseBitOrder = true)]
+    public ulong ReversedFullUInt64Backing;
+
     [BitField(5)]
     [BooleanField("Flag")]
     public uint BooleanBacking;
@@ -222,8 +236,16 @@ public partial struct OptimizedIntegralAccessorStruct
     public int ReversedSignedBooleanBacking;
 
     [BitField(5)]
+    [BooleanField("ReversedFlag", ReverseBitOrder = true)]
+    public uint ReversedBooleanBacking;
+
+    [BitField(5)]
     [EnumField("EnumValue", 2, typeof(TestEnum))]
     public uint EnumBacking;
+
+    [BitField(5)]
+    [EnumField("ReversedEnumValue", 2, typeof(TestEnum), ReverseBitOrder = true)]
+    public uint ReversedEnumBacking;
 }
 
 [BitObject(BitOrder.LeastSignificant)]

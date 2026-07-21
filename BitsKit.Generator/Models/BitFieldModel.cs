@@ -189,6 +189,7 @@ internal abstract record BitFieldModel
         expression = string.Empty;
 
         if (!TryGetDirectIntegralInfo(
+            out _,
             out int workingWidth,
             out string unsignedType))
         {
@@ -250,6 +251,7 @@ internal abstract record BitFieldModel
         expression = string.Empty;
 
         if (!TryGetDirectIntegralInfo(
+            out _,
             out int workingWidth,
             out string unsignedType))
         {
@@ -278,30 +280,60 @@ internal abstract record BitFieldModel
         expression = string.Empty;
 
         if (!TryGetDirectIntegralInfo(
+            out int backingWidth,
             out int workingWidth,
-            out string unsignedType) ||
-            BitOrder != BitOrder.LeastSignificant)
+            out string unsignedType))
         {
             return false;
         }
 
-        int shift = BitOffset;
         ulong valueMask = BitCount == 64 ? ulong.MaxValue : (1UL << BitCount) - 1;
-        ulong shiftedMask = valueMask << shift;
-        string fieldMask = FormatMask(shiftedMask, workingWidth);
+        string valueMaskLiteral = FormatMask(valueMask, workingWidth);
         string backingType = FieldType!.Value.ToString();
 
+        if (BitOrder == BitOrder.MostSignificant)
+        {
+            ulong shiftedMask = 0;
+            for (int i = 0; i < BitCount; i++)
+            {
+                int logicalBit = BitOffset + i;
+                int physicalBit = (logicalBit & ~7) + (7 - (logicalBit & 7));
+                shiftedMask |= 1UL << physicalBit;
+            }
+
+            string fieldMask = FormatMask(shiftedMask, workingWidth);
+            int shift = backingWidth - BitCount - BitOffset;
+            string value = $"unchecked(({unsignedType})({valueExpression})) & {valueMaskLiteral}";
+            string alignedValue = backingWidth switch
+            {
+                8 => $"({value}) << {shift}",
+                16 => $"unchecked((UInt32)BinaryPrimitives.ReverseEndianness(unchecked((UInt16)(({value}) << {shift}))))",
+                32 => $"BinaryPrimitives.ReverseEndianness(({value}) << {shift})",
+                64 => $"BinaryPrimitives.ReverseEndianness(({value}) << {shift})",
+                _ => throw new NotSupportedException()
+            };
+
+            expression =
+                $"{{4}} = unchecked(({backingType})((unchecked(({unsignedType}){{4}}) & ~{fieldMask}) | {alignedValue}))";
+            return true;
+        }
+
+        int lsbShift = BitOffset;
+        ulong lsbShiftedMask = valueMask << lsbShift;
+        string lsbFieldMask = FormatMask(lsbShiftedMask, workingWidth);
+
         expression =
-            $"{{4}} = unchecked(({backingType})((unchecked(({unsignedType}){{4}}) & ~{fieldMask}) | " +
-            $"((unchecked(({unsignedType})({valueExpression})) << {shift}) & {fieldMask})))";
+            $"{{4}} = unchecked(({backingType})((unchecked(({unsignedType}){{4}}) & ~{lsbFieldMask}) | " +
+            $"((unchecked(({unsignedType})({valueExpression})) << {lsbShift}) & {lsbFieldMask})))";
         return true;
     }
 
     private bool TryGetDirectIntegralInfo(
+        out int backingWidth,
         out int workingWidth,
         out string unsignedType)
     {
-        int backingWidth = FieldType switch
+        backingWidth = FieldType switch
         {
             BitFieldType.SByte or BitFieldType.Byte => 8,
             BitFieldType.Int16 or BitFieldType.UInt16 => 16,

@@ -28,6 +28,18 @@ public partial struct GeneratedAccessorLsbModel
     [BitField(5)]
     [BitField("MostSignificantValue", 11, ReverseBitOrder = true)]
     public uint MostSignificantBackingField;
+
+    [BitField(7)]
+    [BitField("MostSignificantWideValue", 43, ReverseBitOrder = true)]
+    public ulong MostSignificantWideBackingField;
+
+    [BitField(5)]
+    [BooleanField("MostSignificantFlag", ReverseBitOrder = true)]
+    public uint MostSignificantBooleanBackingField;
+
+    [BitField(3)]
+    [EnumField("MostSignificantKind", 3, typeof(GeneratedAccessorKind), ReverseBitOrder = true)]
+    public uint MostSignificantEnumBackingField;
 }
 
 public enum GeneratedAccessorKind : uint
