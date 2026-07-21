@@ -1,4 +1,5 @@
-﻿using BitsKit.Primitives;
+﻿using System.Buffers;
+using BitsKit.Primitives;
 
 namespace BitsKit.IO;
 
@@ -13,7 +14,11 @@ public sealed class BitStreamReader : IBitReader, IBitStream
         get
         {
             ThrowIfDisposed();
-            return (_stream.Position << 3) - ((8 - _bitsPos) & 7);
+
+            if (!_stream.CanSeek)
+                throw new NotSupportedException("Stream does not support seeking.");
+
+            return _position;
         }
         set => SetPosition(value);
     }
@@ -28,10 +33,19 @@ public sealed class BitStreamReader : IBitReader, IBitStream
         }
     }
 
+    private const int BufferSize = 4096;
+
+    // BitPrimitives can use a 128-bit unaligned load. Keep cleared padding
+    // beyond the logical buffer so a read near its end remains memory-safe.
+    private const int MaxPrimitiveBytes = 16;
+
     private Stream _stream;
     private byte[] _buffer;
+    private int _bufferIndex;
+    private int _bufferLength;
     private int _bitsPos;
-    private int _buffLen;
+    private long _bufferStart;
+    private long _position;
 
     private readonly bool _leaveOpen;
     private bool _disposed;
@@ -61,9 +75,15 @@ public sealed class BitStreamReader : IBitReader, IBitStream
         if (!source.CanRead)
             throw new NotSupportedException("Stream does not support reading.");
 
+        if (source.CanSeek)
+        {
+            _bufferStart = source.Position;
+            _position = source.Position << 3;
+        }
+
         _stream = source;
-        _buffer = new byte[9];
-        _buffLen = 1;
+        _buffer = ArrayPool<byte>.Shared.Rent(BufferSize + MaxPrimitiveBytes);
+        _buffer.AsSpan(0, BufferSize + MaxPrimitiveBytes).Clear();
         _leaveOpen = leaveOpen;
     }
 
@@ -84,13 +104,26 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         if (!_disposed)
         {
-            if (!_leaveOpen)
-                _stream.Dispose();
-
-            _stream = null!;
-            _buffer = null!;
-            _disposed = true;
-            GC.SuppressFinalize(this);
+            try
+            {
+                if (_leaveOpen)
+                {
+                    if (_stream.CanSeek)
+                        _stream.Position = (_position >> 3) + ((_position & 7) == 0 ? 0 : 1);
+                }
+                else
+                {
+                    _stream.Dispose();
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(_buffer, clearArray: true);
+                _stream = null!;
+                _buffer = null!;
+                _disposed = true;
+                GC.SuppressFinalize(this);
+            }
         }
     }
 
@@ -99,32 +132,20 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     /// <inheritdoc cref="IBitReader.ReadBitLSB"/>
     public bool ReadBitLSB()
     {
-        ThrowIfDisposed();
+        PopulateBuffer(1);
 
-        if (_bitsPos == 0)
-        {
-            ReadExactly(_buffer.AsSpan(0, 1));
-            _buffLen = 1;
-        }
-
-        bool value = BitPrimitives.ReadBitLSB(_buffer, _bitsPos);
-        _bitsPos = (_bitsPos + 1) & 7;
+        bool value = BitPrimitives.ReadBitLSB(CurrentBuffer, _bitsPos);
+        Advance(1);
         return value;
     }
 
     /// <inheritdoc cref="IBitReader.ReadBitMSB"/>
     public bool ReadBitMSB()
     {
-        ThrowIfDisposed();
+        PopulateBuffer(1);
 
-        if (_bitsPos == 0)
-        {
-            ReadExactly(_buffer.AsSpan(0, 1));
-            _buffLen = 1;
-        }
-
-        bool value = BitPrimitives.ReadBitMSB(_buffer, _bitsPos);
-        _bitsPos = (_bitsPos + 1) & 7;
+        bool value = BitPrimitives.ReadBitMSB(CurrentBuffer, _bitsPos);
+        Advance(1);
         return value;
     }
 
@@ -133,8 +154,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        sbyte value = BitPrimitives.ReadInt8LSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        sbyte value = BitPrimitives.ReadInt8LSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -143,8 +164,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        sbyte value = BitPrimitives.ReadInt8MSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        sbyte value = BitPrimitives.ReadInt8MSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -153,8 +174,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        short value = BitPrimitives.ReadInt16LSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        short value = BitPrimitives.ReadInt16LSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -163,8 +184,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        short value = BitPrimitives.ReadInt16MSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        short value = BitPrimitives.ReadInt16MSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -173,8 +194,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        int value = BitPrimitives.ReadInt32LSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        int value = BitPrimitives.ReadInt32LSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -183,8 +204,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        int value = BitPrimitives.ReadInt32MSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        int value = BitPrimitives.ReadInt32MSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -193,8 +214,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        long value = BitPrimitives.ReadInt64LSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        long value = BitPrimitives.ReadInt64LSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -203,8 +224,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        long value = BitPrimitives.ReadInt64MSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        long value = BitPrimitives.ReadInt64MSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -213,8 +234,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        byte value = BitPrimitives.ReadUInt8LSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        byte value = BitPrimitives.ReadUInt8LSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -223,8 +244,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        byte value = BitPrimitives.ReadUInt8MSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        byte value = BitPrimitives.ReadUInt8MSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -233,8 +254,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        ushort value = BitPrimitives.ReadUInt16LSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        ushort value = BitPrimitives.ReadUInt16LSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -243,8 +264,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        ushort value = BitPrimitives.ReadUInt16MSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        ushort value = BitPrimitives.ReadUInt16MSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -253,8 +274,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        uint value = BitPrimitives.ReadUInt32LSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        uint value = BitPrimitives.ReadUInt32LSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -263,8 +284,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        uint value = BitPrimitives.ReadUInt32MSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        uint value = BitPrimitives.ReadUInt32MSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -273,8 +294,8 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        ulong value = BitPrimitives.ReadUInt64LSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        ulong value = BitPrimitives.ReadUInt64LSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
@@ -283,33 +304,45 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     {
         PopulateBuffer(bitCount);
 
-        ulong value = BitPrimitives.ReadUInt64MSB(_buffer, _bitsPos, bitCount);
-        _bitsPos = (_bitsPos + bitCount) & 7;
+        ulong value = BitPrimitives.ReadUInt64MSB(CurrentBuffer, _bitsPos, bitCount);
+        Advance(bitCount);
         return value;
     }
 
     #endregion
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void PopulateBuffer(int bitCount)
     {
         ThrowIfDisposed();
 
-        // calculate the number of whole bytes to buffer
-        int bitsBuffered = (8 - _bitsPos) & 7;
-        int bytesRequired = (bitCount - bitsBuffered + 7) >> 3;
+        if (bitCount == 0)
+            return;
 
-        // preserve the last byte which may contain unread bits
-        if (_buffLen > 1)
-            _buffer[0] = _buffer[_buffLen - 1];
+        int bytesRequired = (_bitsPos + bitCount + 7) >> 3;
+        int bytesAvailable = _bufferLength - _bufferIndex;
 
-        _buffLen = 1;
+        if (bytesAvailable >= bytesRequired || bytesRequired > BufferSize)
+            return;
 
-        if (bytesRequired != 0)
+        if (_bufferIndex != 0)
         {
-            int offset = _bitsPos == 0 ? 0 : 1;
-            ReadExactly(_buffer.AsSpan(offset, bytesRequired));
-            _buffLen = offset + bytesRequired;
+            _buffer.AsSpan(_bufferIndex, bytesAvailable).CopyTo(_buffer);
+            _bufferStart += _bufferIndex;
+            _bufferIndex = 0;
+            _bufferLength = bytesAvailable;
         }
+
+        while (_bufferLength < bytesRequired)
+        {
+            int bytesRead = _stream.Read(_buffer.AsSpan(_bufferLength, BufferSize - _bufferLength));
+            if (bytesRead == 0)
+                throw new EndOfStreamException();
+
+            _bufferLength += bytesRead;
+        }
+
+        _buffer.AsSpan(_bufferLength, MaxPrimitiveBytes).Clear();
     }
 
     private void SetPosition(long position)
@@ -319,40 +352,45 @@ public sealed class BitStreamReader : IBitReader, IBitStream
         if (position < 0)
             IBitStream.ThrowNegativePositionException();
 
+        if (!_stream.CanSeek)
+            throw new NotSupportedException("Stream does not support seeking.");
+
         // calculate offsets
         long bytePos = position >> 3;
         int bitsPos = (int)(position & 7);
-        long streamPosition = bytePos + (bitsPos == 0 ? 0 : 1);
+        long bufferEnd = _bufferStart + _bufferLength;
+        bool positionIsBuffered = bytePos >= _bufferStart &&
+            (bytePos < bufferEnd || (bitsPos == 0 && bytePos == bufferEnd));
 
-        // check if this is a Seek operation
-        if (streamPosition != _stream.Position)
+        if (positionIsBuffered)
         {
-            // update the stream position
+            _bufferIndex = (int)(bytePos - _bufferStart);
+        }
+        else
+        {
             _stream.Position = bytePos;
-
-            // buffer the current byte if not aligned
-            if (bitsPos != 0)
-            {
-                ReadExactly(_buffer.AsSpan(0, 1));
-                _buffLen = 1;
-            }
+            _bufferStart = bytePos;
+            _bufferIndex = 0;
+            _bufferLength = 0;
         }
 
         _bitsPos = bitsPos;
+        _position = position;
+
+        if (bitsPos != 0 && !positionIsBuffered)
+            PopulateBuffer(1);
     }
 
-    private void ReadExactly(Span<byte> buffer)
+    private ReadOnlySpan<byte> CurrentBuffer =>
+        _buffer.AsSpan(_bufferIndex, Math.Max(1, _bufferLength - _bufferIndex));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void Advance(int bitCount)
     {
-        ThrowIfDisposed();
-
-        while (!buffer.IsEmpty)
-        {
-            int bytesRead = _stream.Read(buffer);
-            if (bytesRead == 0)
-                throw new EndOfStreamException();
-
-            buffer = buffer[bytesRead..];
-        }
+        int position = _bitsPos + bitCount;
+        _bufferIndex += position >> 3;
+        _bitsPos = position & 7;
+        _position += bitCount;
     }
 
     private void ThrowIfDisposed()

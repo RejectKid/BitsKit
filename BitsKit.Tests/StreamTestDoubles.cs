@@ -12,9 +12,34 @@ internal sealed class ShortReadMemoryStream(byte[] buffer) : MemoryStream(buffer
         base.Read(buffer[..Math.Min(buffer.Length, 1)]);
 }
 
+internal sealed class CountingReadMemoryStream(byte[] buffer) : MemoryStream(buffer)
+{
+    public int ReadCount { get; private set; }
+
+    public override int Read(Span<byte> buffer)
+    {
+        ReadCount++;
+        return base.Read(buffer);
+    }
+}
+
 internal sealed class NonSeekableWriteStream : MemoryStream
 {
     public override bool CanSeek => false;
+}
+
+internal sealed class NonSeekableReadStream(byte[] buffer) : MemoryStream(buffer)
+{
+    public override bool CanSeek => false;
+    public override long Length => throw new NotSupportedException();
+
+    public override long Position
+    {
+        get => throw new NotSupportedException();
+        set => throw new NotSupportedException();
+    }
+
+    public override long Seek(long offset, SeekOrigin loc) => throw new NotSupportedException();
 }
 
 internal sealed class SparseStream : Stream

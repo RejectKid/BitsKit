@@ -203,6 +203,111 @@ public class IO_ReaderTests
     }
 
     [TestMethod]
+    public void SequentialReadsUseReadAheadBuffer()
+    {
+        using CountingReadMemoryStream stream = new(new byte[8192]);
+        using BitStreamReader reader = new(stream);
+
+        for (int i = 0; i < 1024; i++)
+            reader.ReadUInt8LSB(8);
+
+        Assert.AreEqual(1, stream.ReadCount);
+        Assert.AreEqual(8192, reader.Position);
+    }
+
+    [TestMethod]
+    public void SeekingWithinBufferedDataDoesNotReadAgain()
+    {
+        using CountingReadMemoryStream stream = new(Data);
+        using BitStreamReader reader = new(stream);
+
+        reader.ReadUInt64LSB(64);
+        int readCount = stream.ReadCount;
+        reader.Position = 8;
+
+        Assert.AreEqual(Data[1], reader.ReadUInt8LSB(8));
+        Assert.AreEqual(readCount, stream.ReadCount);
+    }
+
+    [TestMethod]
+    public void ReadsAcrossInternalBufferBoundary()
+    {
+        byte[] data = new byte[4104];
+        for (int i = 0; i < data.Length; i++)
+            data[i] = (byte)i;
+
+        const int bitOffset = (4093 * 8) + 3;
+        ulong expected = Helpers.ReadBitsMSB(data, bitOffset, 64);
+        using MemoryStream stream = new(data);
+        using BitStreamReader reader = new(stream);
+        reader.Position = bitOffset;
+
+        Assert.AreEqual(expected, reader.ReadUInt64MSB(64));
+        Assert.AreEqual(bitOffset + 64, reader.Position);
+    }
+
+    [TestMethod]
+    public void RandomizedReadsMatchAcrossBufferRefillsAndSeeks()
+    {
+        byte[] data = new byte[8193];
+        Random random = new(0xB175);
+        random.NextBytes(data);
+        using MemoryStream stream = new(data);
+        using BitStreamReader reader = new(stream);
+
+        for (int i = 0; i < 1000; i++)
+        {
+            int bitCount = random.Next(65);
+            int bitOffset = random.Next((data.Length * 8) - bitCount + 1);
+            reader.Position = bitOffset;
+
+            ulong actual = (i & 1) == 0
+                ? reader.ReadUInt64LSB(bitCount)
+                : reader.ReadUInt64MSB(bitCount);
+            ulong expected = (i & 1) == 0
+                ? Helpers.ReadBitsLSB(data, bitOffset, bitCount)
+                : Helpers.ReadBitsMSB(data, bitOffset, bitCount);
+
+            Assert.AreEqual(expected, actual, $"Offset: {bitOffset}, Count: {bitCount}");
+            Assert.AreEqual(bitOffset + bitCount, reader.Position);
+        }
+    }
+
+    [TestMethod]
+    public void LeaveOpenRestoresUnderlyingStreamPosition()
+    {
+        using MemoryStream stream = new(Data);
+        using (BitStreamReader reader = new(stream, true))
+            reader.ReadBitLSB();
+
+        Assert.AreEqual(1, stream.Position);
+        Assert.IsTrue(stream.CanRead);
+    }
+
+    [TestMethod]
+    public void StartsAtUnderlyingStreamPosition()
+    {
+        using MemoryStream stream = new(Data);
+        stream.Position = 3;
+        using BitStreamReader reader = new(stream);
+
+        Assert.AreEqual(24, reader.Position);
+        Assert.AreEqual(Data[3], reader.ReadUInt8LSB(8));
+        Assert.AreEqual(32, reader.Position);
+    }
+
+    [TestMethod]
+    public void SequentialReadingSupportsNonSeekableStreams()
+    {
+        using NonSeekableReadStream stream = new(Data);
+        using BitStreamReader reader = new(stream);
+
+        Assert.AreEqual(Data[0], reader.ReadUInt8LSB(8));
+        Assert.AreEqual(Data[1], reader.ReadUInt8LSB(8));
+        Assert.ThrowsExactly<NotSupportedException>(() => _ = reader.Position);
+    }
+
+    [TestMethod]
     public void ReadingBitAtEndThrowsEndOfStreamException()
     {
         using MemoryStream stream = new([0xA5]);
