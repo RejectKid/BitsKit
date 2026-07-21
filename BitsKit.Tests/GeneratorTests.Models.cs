@@ -214,6 +214,35 @@ public partial struct OptimizedIntegralAccessorStruct
     public uint BooleanBacking;
 
     [BitField(5)]
+    [BooleanField("SignedFlag")]
+    public int SignedBooleanBacking;
+
+    [BitField(5)]
+    [BooleanField("ReversedSignedFlag", ReverseBitOrder = true)]
+    public int ReversedSignedBooleanBacking;
+
+    [BitField(5)]
     [EnumField("EnumValue", 2, typeof(TestEnum))]
     public uint EnumBacking;
 }
+
+[BitObject(BitOrder.LeastSignificant)]
+public partial struct OptimizedMemoryAccessorStruct
+{
+    [BitField(5)]
+    [BitField("Value", 11, BitFieldType.UInt32)]
+    public Memory<byte> Backing;
+}
+
+#if NET8_0_OR_GREATER
+
+[BitObject(BitOrder.LeastSignificant)]
+[InlineArray(4)]
+public partial struct OptimizedInlineArrayAccessorStruct
+{
+    [BitField(5)]
+    [BitField("Value", 11, BitFieldType.UInt32, Modifiers = BitFieldModifiers.ReadOnly)]
+    private byte _element;
+}
+
+#endif

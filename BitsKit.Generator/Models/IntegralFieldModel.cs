@@ -42,6 +42,14 @@ internal sealed record IntegralFieldModel : BitFieldModel
 
     protected override string GetGetterTemplate()
     {
+        if (TryGetDirectIntegralReadExpression(out string expression))
+        {
+            if (IsTypeCast)
+                expression = $"({ReturnType})({expression})";
+
+            return "{0} {1} => " + expression + ";";
+        }
+
         if (IsTypeCast)
             return string.Format(StringConstants.ExplicitGetterTemplate, GetterSource(), ReturnType);
 

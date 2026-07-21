@@ -23,6 +23,7 @@ internal static class StringConstants
     #pragma warning disable IDE0161 // Convert to file-scoped namespace
     
     using System;
+    using System.Buffers.Binary;
     using System.Runtime.InteropServices;
     using BitsKit.Primitives;
 

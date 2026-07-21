@@ -30,6 +30,9 @@ internal sealed record BooleanFieldModel : BitFieldModel
 
     protected override string GetGetterTemplate()
     {
+        if (TryGetDirectIntegralBooleanReadExpression(out string expression))
+            return "{0} {1} => " + expression + ";";
+
         string template = BackingFieldType == BackingFieldType.Integral ?
             StringConstants.BooleanGetterTemplate :
             StringConstants.BooleanSpanGetterTemplate;

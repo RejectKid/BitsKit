@@ -8,6 +8,8 @@ param(
     [ValidateRange(0, 100)]
     [double] $RegressionTolerancePercent = 5,
 
+    [string[]] $MethodFilter = @('*'),
+
     [string] $ArtifactsPath = 'artifacts/benchmark-regression',
 
     [switch] $Enforce
@@ -55,7 +57,7 @@ function Invoke-Tool {
     }
 }
 
-function Get-SharedBenchmarkMethods {
+function Get-ComparableBenchmarkMethods {
     $methods = [Collections.Generic.List[string]]::new()
 
     foreach ($operation in 'Read', 'Write') {
@@ -73,8 +75,22 @@ function Get-SharedBenchmarkMethods {
         }
     }
 
-    if ($methods.Count -ne 56) {
-        throw "Expected 56 fork-point benchmark methods, found $($methods.Count)."
+    foreach ($method in
+        'GeneratedAccessorGetUInt32LSB',
+        'GeneratedAccessorSetUInt32LSB',
+        'GeneratedAccessorGetInt32LSB',
+        'GeneratedAccessorGetBooleanLSB',
+        'GeneratedAccessorGetEnumLSB',
+        'GeneratedAccessorGetUInt64LSB',
+        'GeneratedAccessorGetUInt32MSB',
+        'GeneratedAccessorGetMemoryLSB',
+        'GeneratedAccessorSetMemoryLSB',
+        'GeneratedAccessorGetInlineArrayLSB') {
+        $methods.Add($method)
+    }
+
+    if ($methods.Count -ne 66) {
+        throw "Expected 66 comparable benchmark methods, found $($methods.Count)."
     }
 
     return $methods
@@ -89,12 +105,16 @@ function Invoke-BenchmarkVariant {
         [string] $BitsKitProjectPath,
 
         [Parameter(Mandatory)]
+        [string] $BitsKitGeneratorProjectPath,
+
+        [Parameter(Mandatory)]
         [string[]] $Methods
     )
 
     $variantArtifacts = Join-Path $runArtifactsPath $Name
     $buildProperties = @(
-        "-p:BitsKitProjectPath=$BitsKitProjectPath"
+        "-p:BitsKitProjectPath=$BitsKitProjectPath",
+        "-p:BitsKitGeneratorProjectPath=$BitsKitGeneratorProjectPath"
     )
     $cleanArguments = @(
         'clean',
@@ -178,15 +198,24 @@ try {
     Invoke-Tool -FileName 'git' -Arguments @('worktree', 'add', '--detach', $baselineRoot, $BaselineCommit)
     $worktreeCreated = $true
 
-    $methods = @(Get-SharedBenchmarkMethods)
+    $allMethods = @(Get-ComparableBenchmarkMethods)
+    $methods = @($allMethods | Where-Object {
+        $method = $_
+        @($MethodFilter | Where-Object { $method -like $_ }).Count -ne 0
+    })
+    if ($methods.Count -eq 0) {
+        throw "No benchmark methods matched: $($MethodFilter -join ', ')."
+    }
     $baselineProjectPath = Join-Path $baselineRoot 'BitsKit/BitsKit.csproj'
+    $baselineGeneratorProjectPath = Join-Path $baselineRoot 'BitsKit.Generator/BitsKit.Generator.csproj'
     $currentProjectPath = Join-Path $repositoryRoot 'BitsKit/BitsKit.csproj'
+    $currentGeneratorProjectPath = Join-Path $repositoryRoot 'BitsKit.Generator/BitsKit.Generator.csproj'
 
     Write-Host "Running fork-point benchmarks from $BaselineCommit..."
-    $baseline = Invoke-BenchmarkVariant -Name 'baseline' -BitsKitProjectPath $baselineProjectPath -Methods $methods
+    $baseline = Invoke-BenchmarkVariant -Name 'baseline' -BitsKitProjectPath $baselineProjectPath -BitsKitGeneratorProjectPath $baselineGeneratorProjectPath -Methods $methods
 
     Write-Host 'Running current benchmarks...'
-    $current = Invoke-BenchmarkVariant -Name 'current' -BitsKitProjectPath $currentProjectPath -Methods $methods
+    $current = Invoke-BenchmarkVariant -Name 'current' -BitsKitProjectPath $currentProjectPath -BitsKitGeneratorProjectPath $currentGeneratorProjectPath -Methods $methods
 
     $baselineByMethod = @{}
     foreach ($benchmark in $baseline.Benchmarks) {
@@ -274,7 +303,8 @@ try {
     $report.Add("- Job: ``$Job``")
     $report.Add("- Host: $($baseline.HostEnvironmentInfo.ProcessorName), $($baseline.HostEnvironmentInfo.RuntimeVersion)")
     $report.Add("- Allowed regression: $($RegressionTolerancePercent.ToString('0.##'))%")
-    $report.Add("- Shared operations: $($comparison.Count)")
+    $report.Add("- Method filter: $($MethodFilter -join ', ')")
+    $report.Add("- Comparable operations: $($comparison.Count)")
     $report.Add("- Geometric-mean change: $($geometricMeanChange.ToString('+0.00;-0.00;0.00'))%")
     $report.Add("- Regressions beyond tolerance: $($regressions.Count)")
     $report.Add("- Inconclusive beyond-mean-threshold results: $($inconclusive.Count)")

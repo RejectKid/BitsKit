@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <BitsKitProjectPath Condition="'$(BitsKitProjectPath)' == ''">$(MSBuildThisFileDirectory)..\BitsKit\BitsKit.csproj</BitsKitProjectPath>
+    <BitsKitGeneratorProjectPath Condition="'$(BitsKitGeneratorProjectPath)' == ''">$(MSBuildThisFileDirectory)..\BitsKit.Generator\BitsKit.Generator.csproj</BitsKitGeneratorProjectPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,11 +15,13 @@
 
   <ItemGroup>
     <ProjectReference Include="$(BitsKitProjectPath)" AdditionalProperties="TargetFramework=net8.0" />
+    <ProjectReference Include="$(BitsKitGeneratorProjectPath)" AdditionalProperties="TargetFramework=netstandard2.0" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.cs" Link="BitsKitBenchmark.cs" />
+    <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.GeneratedAccessors.cs" Link="BitsKitBenchmark.GeneratedAccessors.cs" />
     <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.BitReader.cs" Link="BitsKitBenchmark.BitReader.cs" />
     <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.BitStreamReader.cs" Link="BitsKitBenchmark.BitStreamReader.cs" />
     <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.BitStreamWriter.cs" Link="BitsKitBenchmark.BitStreamWriter.cs" />
@@ -29,6 +32,7 @@
     <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.ReadMSB.cs" Link="BitsKitBenchmark.ReadMSB.cs" />
     <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.WriteLSB.cs" Link="BitsKitBenchmark.WriteLSB.cs" />
     <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.WriteMSB.cs" Link="BitsKitBenchmark.WriteMSB.cs" />
+    <Compile Include="..\BitsKit.Benchmarks\GeneratedAccessorBenchmarkModels.cs" Link="GeneratedAccessorBenchmarkModels.cs" />
     <Compile Include="..\BitsKit.Tests\Helpers.cs" Link="Helpers.cs" />
   </ItemGroup>
 
