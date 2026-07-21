@@ -240,6 +240,8 @@ public class GeneratorTests
                 UInt64Backing = ((ulong)(uint)random.Next() << 32) | (uint)random.Next(),
                 ReversedUInt64Backing = ((ulong)(uint)random.Next() << 32) | (uint)random.Next(),
                 BooleanBacking = (uint)random.Next(),
+                SignedBooleanBacking = random.Next(),
+                ReversedSignedBooleanBacking = random.Next(),
                 EnumBacking = (uint)random.Next()
             };
 
@@ -250,6 +252,8 @@ public class GeneratorTests
             Assert.AreEqual(BitPrimitives.ReadUInt64LSB(actual.UInt64Backing, 0, 64), actual.FullUInt64Value);
             Assert.AreEqual(BitPrimitives.ReadUInt64MSB(actual.ReversedUInt64Backing, 7, 43), actual.ReversedUInt64Value);
             Assert.AreEqual(BitPrimitives.ReadUInt32LSB(actual.BooleanBacking, 5, 1) == 1, actual.Flag);
+            Assert.AreEqual((actual.SignedBooleanBacking & (1 << 5)) != 0, actual.SignedFlag);
+            Assert.AreEqual(BitPrimitives.ReadInt32MSB(actual.ReversedSignedBooleanBacking, 5, 1) != 0, actual.ReversedSignedFlag);
             Assert.AreEqual((TestEnum)BitPrimitives.ReadUInt32LSB(actual.EnumBacking, 5, 2), actual.EnumValue);
 
             byte byteValue = (byte)random.Next();
@@ -292,11 +296,48 @@ public class GeneratorTests
             actual.Flag = flag;
             Assert.AreEqual(expectedBoolean, actual.BooleanBacking);
 
+            int expectedSignedBoolean = actual.SignedBooleanBacking;
+            BitPrimitives.WriteInt32LSB(ref expectedSignedBoolean, 5, flag ? 1 : 0, 1);
+            actual.SignedFlag = flag;
+            Assert.AreEqual(expectedSignedBoolean, actual.SignedBooleanBacking);
+
+            int expectedReversedSignedBoolean = actual.ReversedSignedBooleanBacking;
+            BitPrimitives.WriteInt32MSB(ref expectedReversedSignedBoolean, 5, flag ? 1 : 0, 1);
+            actual.ReversedSignedFlag = flag;
+            Assert.AreEqual(expectedReversedSignedBoolean, actual.ReversedSignedBooleanBacking);
+
             TestEnum enumValue = (TestEnum)random.Next(4);
             uint expectedEnum = actual.EnumBacking;
             BitPrimitives.WriteUInt32LSB(ref expectedEnum, 5, (uint)enumValue, 2);
             actual.EnumValue = enumValue;
             Assert.AreEqual(expectedEnum, actual.EnumBacking);
+        }
+    }
+
+    [TestMethod]
+    public void OptimizedStorageGettersMatchBitPrimitives()
+    {
+        Random random = new(0x51A6E);
+
+        for (int i = 0; i < 1000; i++)
+        {
+            byte[] bytes = new byte[4];
+            random.NextBytes(bytes);
+            var memory = new OptimizedMemoryAccessorStruct { Backing = bytes };
+
+            Assert.AreEqual(BitPrimitives.ReadUInt32LSB(bytes, 5, 11), memory.Value);
+
+            uint nextValue = (uint)random.Next(1 << 11);
+            byte[] expectedBytes = (byte[])bytes.Clone();
+            BitPrimitives.WriteUInt32LSB(expectedBytes, 5, nextValue, 11);
+            memory.Value = nextValue;
+            CollectionAssert.AreEqual(expectedBytes, bytes);
+
+#if NET8_0_OR_GREATER
+            var inline = new OptimizedInlineArrayAccessorStruct();
+            bytes.CopyTo((Span<byte>)inline);
+            Assert.AreEqual(BitPrimitives.ReadUInt32LSB(bytes, 5, 11), inline.Value);
+#endif
         }
     }
 
@@ -323,7 +364,7 @@ public class GeneratorTests
         {
             public  Int32 Generated00 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 0, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 30)) >> 30));
             }
 
             public  Int32 Generated10 
@@ -366,7 +407,7 @@ public class GeneratorTests
         {
             public  Int32 Generated00 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 0, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 30)) >> 30));
             }
 
             public  Int32 Generated10 
@@ -425,54 +466,54 @@ public class GeneratorTests
         {
             public  Int32 Generated01 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 0, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 30)) >> 30));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0x3U) | ((unchecked((UInt32)(value)) << 0) & 0x3U)));
             }
 
             private  Int32 Generated02 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 4, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 26)) >> 30));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0x30U) | ((unchecked((UInt32)(value)) << 4) & 0x30U)));
             }
 
             internal  Int32 Generated03 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 6, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 24)) >> 30));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0xC0U) | ((unchecked((UInt32)(value)) << 6) & 0xC0U)));
             }
 
             public  Int32 Generated04 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 8, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 22)) >> 30));
             }
 
             public  Int32 Generated05 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 10, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 20)) >> 30));
                 init => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0xC00U) | ((unchecked((UInt32)(value)) << 10) & 0xC00U)));
             }
 
             public  Int32 Generated06 
             {
-                get => BitPrimitives.ReadInt32MSB(BackingField00, 12, 2);
+                get => unchecked((Int32)((unchecked((Int32)((BinaryPrimitives.ReverseEndianness(unchecked((UInt32)BackingField00)) << 12) >> 30)) << 30) >> 30));
                 set => BitPrimitives.WriteInt32MSB(ref BackingField00, 12, value, 2);
             }
 
             protected  Int32 Generated07 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 14, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 16)) >> 30));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0xC000U) | ((unchecked((UInt32)(value)) << 14) & 0xC000U)));
             }
 
             protected internal  Int32 Generated08 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 16, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 14)) >> 30));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0x30000U) | ((unchecked((UInt32)(value)) << 16) & 0x30000U)));
             }
 
             private protected  Int32 Generated09 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 18, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 12)) >> 30));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0xC0000U) | ((unchecked((UInt32)(value)) << 18) & 0xC0000U)));
             }
 
@@ -571,60 +612,60 @@ public class GeneratorTests
         {
             public  Int32 Generated01 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 0, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 30)) >> 30));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0x3U) | ((unchecked((UInt32)(value)) << 0) & 0x3U)));
             }
 
             private  Int32 Generated02 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 4, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 26)) >> 30));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0x30U) | ((unchecked((UInt32)(value)) << 4) & 0x30U)));
             }
 
             internal  Int32 Generated03 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 6, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 24)) >> 30));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0xC0U) | ((unchecked((UInt32)(value)) << 6) & 0xC0U)));
             }
 
             public  Int32 Generated04 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 8, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 22)) >> 30));
             }
 
             public  Int32 Generated05 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 10, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 20)) >> 30));
                 init => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0xC00U) | ((unchecked((UInt32)(value)) << 10) & 0xC00U)));
             }
 
             public  Int32 Generated06 
             {
-                get => BitPrimitives.ReadInt32MSB(BackingField00, 12, 2);
+                get => unchecked((Int32)((unchecked((Int32)((BinaryPrimitives.ReverseEndianness(unchecked((UInt32)BackingField00)) << 12) >> 30)) << 30) >> 30));
                 set => BitPrimitives.WriteInt32MSB(ref BackingField00, 12, value, 2);
             }
 
             public required Int32 Generated07 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 14, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 16)) >> 30));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0xC000U) | ((unchecked((UInt32)(value)) << 14) & 0xC000U)));
             }
 
             protected Int32 Generated08 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 16, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 14)) >> 30));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0x30000U) | ((unchecked((UInt32)(value)) << 16) & 0x30000U)));
             }
 
             protected internal Int32 Generated09 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 18, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 12)) >> 30));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0xC0000U) | ((unchecked((UInt32)(value)) << 18) & 0xC0000U)));
             }
 
             private protected Int32 Generated0A 
             {
-                get => BitPrimitives.ReadInt32LSB(BackingField00, 20, 2);
+                get => unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 10)) >> 30));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0x300000U) | ((unchecked((UInt32)(value)) << 20) & 0x300000U)));
             }
         }
@@ -662,7 +703,7 @@ public class GeneratorTests
         {
             public  System.Boolean Generated01 
             {
-                readonly get => BitPrimitives.ReadInt32LSB(BackingField00, 0, 1) == 1;
+                readonly get => (unchecked((UInt32)BackingField00) & 0x1U) != 0;
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0x1U) | ((unchecked((UInt32)(value ? 1 : 0)) << 0) & 0x1U)));
             }
 
@@ -720,13 +761,13 @@ public class GeneratorTests
         {
             public  BitsKit.Tests.TestEnum Generated00 
             {
-                readonly get => (BitsKit.Tests.TestEnum)BitPrimitives.ReadInt32LSB(BackingField00, 0, 2);
+                readonly get => (BitsKit.Tests.TestEnum)(unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 30)) >> 30)));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0x3U) | ((unchecked((UInt32)(value)) << 0) & 0x3U)));
             }
 
             public  BitsKit.Tests.TestEnum Generated01 
             {
-                readonly get => (BitsKit.Tests.TestEnum)BitPrimitives.ReadInt32LSB(BackingField00, 2, 2);
+                readonly get => (BitsKit.Tests.TestEnum)(unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 28)) >> 30)));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0xCU) | ((unchecked((UInt32)(value)) << 2) & 0xCU)));
             }
 
@@ -791,7 +832,7 @@ public class GeneratorTests
         {
             public  Byte Generated00 
             {
-                readonly get => (Byte)BitPrimitives.ReadInt32LSB(BackingField00, 0, 2);
+                readonly get => (Byte)(unchecked((Int32)(unchecked((Int32)(unchecked((UInt32)BackingField00) << 30)) >> 30)));
                 set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0x3U) | ((unchecked((UInt32)(value)) << 0) & 0x3U)));
             }
 

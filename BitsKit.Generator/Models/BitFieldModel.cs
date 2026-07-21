@@ -182,6 +182,95 @@ internal abstract record BitFieldModel
     };
 
     /// <summary>
+    /// Creates a specialized scalar read for fixed-width integral backing fields.
+    /// </summary>
+    protected bool TryGetDirectIntegralReadExpression(out string expression)
+    {
+        expression = string.Empty;
+
+        if (!TryGetDirectIntegralInfo(
+            out int workingWidth,
+            out string unsignedType))
+        {
+            return false;
+        }
+
+        string backingType = FieldType!.Value.ToString();
+        string unsignedSource = $"unchecked(({unsignedType}){{4}})";
+        if (BitOrder == BitOrder.MostSignificant)
+        {
+            string extracted =
+                $"(BinaryPrimitives.ReverseEndianness({unsignedSource}) << {BitOffset}) >> {workingWidth - BitCount}";
+
+            if (FieldType is BitFieldType.SByte or
+                BitFieldType.Int16 or
+                BitFieldType.Int32 or
+                BitFieldType.Int64)
+            {
+                string signedType = workingWidth == 64 ? "Int64" : "Int32";
+                int signShift = workingWidth - BitCount;
+                expression =
+                    $"unchecked(({backingType})((unchecked(({signedType})({extracted})) << {signShift}) >> {signShift}))";
+            }
+            else
+            {
+                expression = $"unchecked(({backingType})({extracted}))";
+            }
+
+            return true;
+        }
+
+        if (FieldType is BitFieldType.SByte or
+            BitFieldType.Int16 or
+            BitFieldType.Int32 or
+            BitFieldType.Int64)
+        {
+            string signedType = workingWidth == 64 ? "Int64" : "Int32";
+            int leftShift = workingWidth - BitOffset - BitCount;
+            int rightShift = workingWidth - BitCount;
+            expression =
+                $"unchecked(({backingType})(unchecked(({signedType})({unsignedSource} << {leftShift})) >> {rightShift}))";
+        }
+        else
+        {
+            ulong valueMask = BitCount == 64 ? ulong.MaxValue : (1UL << BitCount) - 1;
+            string mask = FormatMask(valueMask, workingWidth);
+            expression =
+                $"unchecked(({backingType})(({unsignedSource} >> {BitOffset}) & {mask}))";
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Creates a specialized scalar bit test for integral backing fields.
+    /// </summary>
+    protected bool TryGetDirectIntegralBooleanReadExpression(out string expression)
+    {
+        expression = string.Empty;
+
+        if (!TryGetDirectIntegralInfo(
+            out int workingWidth,
+            out string unsignedType))
+        {
+            return false;
+        }
+
+        if (BitOrder == BitOrder.MostSignificant)
+        {
+            expression =
+                $"((BinaryPrimitives.ReverseEndianness(unchecked(({unsignedType}){{4}})) << {BitOffset}) >> {workingWidth - 1}) != 0";
+        }
+        else
+        {
+            string mask = FormatMask(1UL << BitOffset, workingWidth);
+            expression = $"(unchecked(({unsignedType}){{4}}) & {mask}) != 0";
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Creates a specialized scalar assignment for fixed-width integral backing fields.
     /// </summary>
     protected bool TryGetDirectIntegralWriteExpression(string valueExpression, out string expression)
@@ -190,7 +279,8 @@ internal abstract record BitFieldModel
 
         if (!TryGetDirectIntegralInfo(
             out int workingWidth,
-            out string unsignedType))
+            out string unsignedType) ||
+            BitOrder != BitOrder.LeastSignificant)
         {
             return false;
         }
@@ -223,7 +313,6 @@ internal abstract record BitFieldModel
         unsignedType = workingWidth == 64 ? "UInt64" : "UInt32";
 
         return BackingFieldType == BackingFieldType.Integral &&
-               BitOrder == BitOrder.LeastSignificant &&
                backingWidth != 0 &&
                BitCount > 0 &&
                BitOffset >= 0 &&

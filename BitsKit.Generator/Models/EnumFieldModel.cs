@@ -50,6 +50,9 @@ internal sealed record EnumFieldModel : BitFieldModel
 
     protected override string GetGetterTemplate()
     {
+        if (TryGetDirectIntegralReadExpression(out string expression))
+            return $"{{0}} {{1}} => ({ReturnType})({expression});";
+
         return string.Format(StringConstants.ExplicitGetterTemplate, GetterSource(), ReturnType);
     }
 
