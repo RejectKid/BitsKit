@@ -250,7 +250,7 @@ static int Decode(uint value)
 
 The [benchmark workflow](https://github.com/RejectKid/BitsKit/actions/workflows/benchmarks.yml) measures the library's features on .NET 10 every week and on demand. The report covers LSB/MSB bit primitives, generated scalar accessors, and the array-, span-, and stream-backed readers and writers across supported bit widths. Relevant pull requests run one focused dry benchmark to validate the harness. Each run includes a readable, categorized results table in its workflow summary and downloadable Markdown, JSON, logs, and environment metadata for 90 days.
 
-The published timings show the cost of BitsKit's different operations on that hosted run. Use stable local hardware and attach its generated report when making a performance-regression claim.
+The published `Mean` values are normalized to one library operation, even though each benchmark processes a larger batch internally for measurement stability. This keeps primitive reads and writes, generated accessors, and the reader/writer types on the same nanoseconds-per-operation scale. Use stable local hardware and attach its generated report when making a performance-regression claim.
 
 Run the complete feature suite locally:
 

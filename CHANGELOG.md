@@ -12,6 +12,10 @@ Notable changes to the community-maintained fork are documented here. This proje
 
 - The source generator emits direct mask-and-shift setters for valid fixed-width, least-significant scalar fields, while retaining `BitPrimitives` for getters and for memory-backed, native-integer, reversed-order, and invalid-range cases.
 
+### Fixed
+
+- Benchmark reports normalize batched measurements to a single library operation and include generated scalar accessors in the default feature suite.
+
 ## 1.4.0 - 2026-07-20
 
 ### Changed

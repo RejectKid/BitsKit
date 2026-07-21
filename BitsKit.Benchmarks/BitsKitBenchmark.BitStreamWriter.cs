@@ -7,7 +7,7 @@ namespace BitsKit.Benchmarks;
 
 public partial class BitsKitBenchmark
 {
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt1Operations)]
     [BenchmarkCategory("BitStreamWriter", "UInt1")]
     public int BitStreamWriterBit()
     {
@@ -29,7 +29,7 @@ public partial class BitsKitBenchmark
 
         return 0;
     }
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt4Operations)]
     [BenchmarkCategory("BitStreamWriter", "UInt4")]
     public int BitStreamWriterUInt04()
     {
@@ -53,7 +53,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt8Operations)]
     [BenchmarkCategory("BitStreamWriter", "UInt8")]
     public int BitStreamWriterUInt08()
     {
@@ -77,7 +77,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt16Operations)]
     [BenchmarkCategory("BitStreamWriter", "UInt16")]
     public int BitStreamWriterUInt16()
     {
@@ -101,7 +101,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt32Operations)]
     [BenchmarkCategory("BitStreamWriter", "UInt32", "Unaligned")]
     public int BitStreamWriterUInt32()
     {
@@ -125,7 +125,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt32Operations)]
     [BenchmarkCategory("BitStreamWriter", "UInt32", "Aligned")]
     public int BitStreamWriterUInt32Aligned()
     {
@@ -149,7 +149,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt32Operations)]
     [BenchmarkCategory("BitStreamWriter", "UInt32", "Aligned", "ForwardOnly")]
     public long BitStreamWriterUInt32ForwardOnly()
     {
@@ -174,7 +174,7 @@ public partial class BitsKitBenchmark
         return stream.BytesWritten;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt64Operations)]
     [BenchmarkCategory("BitStreamWriter", "UInt64")]
     public int BitStreamWriterUInt64()
     {
