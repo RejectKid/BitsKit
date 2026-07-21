@@ -1,3 +1,9 @@
+v1.4.0
+- Make stream reads reliable across partial reads and fail cleanly at EOF.
+- Add pooled sequential buffering for BitStreamReader and BitStreamWriter.
+- Preserve in-place writes and support stream positions beyond Int32.MaxValue.
+- Improve aligned UInt32 stream writes by about 15% and mixed unaligned writes by about 6% in local benchmarks.
+
 v1.3.1
 - Fix tag-driven GitHub Release creation in the split release pipeline.
 
