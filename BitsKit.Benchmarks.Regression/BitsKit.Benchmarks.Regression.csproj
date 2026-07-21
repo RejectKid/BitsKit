@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <BitsKitProjectPath Condition="'$(BitsKitProjectPath)' == ''">$(MSBuildThisFileDirectory)..\BitsKit\BitsKit.csproj</BitsKitProjectPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(BitsKitProjectPath)" AdditionalProperties="TargetFramework=net8.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.cs" Link="BitsKitBenchmark.cs" />
+    <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.BitReader.cs" Link="BitsKitBenchmark.BitReader.cs" />
+    <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.BitStreamReader.cs" Link="BitsKitBenchmark.BitStreamReader.cs" />
+    <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.BitStreamWriter.cs" Link="BitsKitBenchmark.BitStreamWriter.cs" />
+    <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.BitWriter.cs" Link="BitsKitBenchmark.BitWriter.cs" />
+    <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.MemoryBitReader.cs" Link="BitsKitBenchmark.MemoryBitReader.cs" />
+    <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.MemoryBitWriter.cs" Link="BitsKitBenchmark.MemoryBitWriter.cs" />
+    <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.ReadLSB.cs" Link="BitsKitBenchmark.ReadLSB.cs" />
+    <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.ReadMSB.cs" Link="BitsKitBenchmark.ReadMSB.cs" />
+    <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.WriteLSB.cs" Link="BitsKitBenchmark.WriteLSB.cs" />
+    <Compile Include="..\BitsKit.Benchmarks\BitsKitBenchmark.WriteMSB.cs" Link="BitsKitBenchmark.WriteMSB.cs" />
+    <Compile Include="..\BitsKit.Tests\Helpers.cs" Link="Helpers.cs" />
+  </ItemGroup>
+
+</Project>
