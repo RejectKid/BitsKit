@@ -163,9 +163,7 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
     {
         if (IsSequentialAppend)
         {
-            Span<byte> appendBuffer = PrepareAppendBuffer(1);
-            BitPrimitives.WriteBitLSB(appendBuffer, _bitsPos, value);
-            CommitAppend(1);
+            WriteSequentialBit(value, 1 << _bitsPos);
             return;
         }
 
@@ -181,9 +179,7 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
     {
         if (IsSequentialAppend)
         {
-            Span<byte> appendBuffer = PrepareAppendBuffer(1);
-            BitPrimitives.WriteBitMSB(appendBuffer, _bitsPos, value);
-            CommitAppend(1);
+            WriteSequentialBit(value, 1 << (7 - _bitsPos));
             return;
         }
 
@@ -556,6 +552,26 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
             ThrowIfDisposed();
             return !_isSeekable || _writeBufferLength != 0 || _stream.Position >= _stream.Length;
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void WriteSequentialBit(bool value, int mask)
+    {
+        if (value)
+            _buffer |= (byte)mask;
+        else
+            _buffer &= (byte)~mask;
+
+        _bitsPos++;
+        if (_bitsPos != 8)
+            return;
+
+        _writeBuffer[_writeBufferLength++] = _buffer;
+        _buffer = 0;
+        _bitsPos = 0;
+
+        if (_writeBufferLength == BufferSize)
+            FlushWriteBuffer();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

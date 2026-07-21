@@ -247,6 +247,27 @@ public class IO_ReaderTests
     }
 
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void SequentialBitReadsMatchAcrossBufferRefills(bool mostSignificant)
+    {
+        byte[] data = new byte[8201];
+        new Random(0xB175).NextBytes(data);
+        using MemoryStream stream = new(data);
+        using BitStreamReader reader = new(stream);
+
+        for (int bitOffset = 0; bitOffset < data.Length * 8; bitOffset++)
+        {
+            bool expected = mostSignificant
+                ? Helpers.ReadBitsMSB(data, bitOffset, 1) != 0
+                : Helpers.ReadBitsLSB(data, bitOffset, 1) != 0;
+            bool actual = mostSignificant ? reader.ReadBitMSB() : reader.ReadBitLSB();
+
+            Assert.AreEqual(expected, actual, $"Bit offset {bitOffset}");
+        }
+    }
+
+    [TestMethod]
     public void RandomizedReadsMatchAcrossBufferRefillsAndSeeks()
     {
         byte[] data = new byte[8193];
