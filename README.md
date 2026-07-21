@@ -111,6 +111,8 @@ Enum bit-fields are supported by the `[EnumFieldAttribute]` helper attribute. Th
 #### Modifiers
 The `BitFieldModifiers` enum allows alterations to the way that the source generator produces the bit-fields. By default all bit-fields are generated as a *public read/write* or *public readonly* properties relative to their backing field's accessibility. The `Modifiers` field allows control over this and provides the ability to change a bit-field's accessibility and if it is `readonly`, `init only` (.NET 6.0) and/or `required` (.NET 7.0).
 
+For valid fixed-width integral backing fields using least-significant bit order, generated setters use direct masks and shifts. Getters, memory-backed fields, native integers, reversed bit order, and invalid ranges continue through `BitPrimitives` to preserve their established semantics.
+
 **Note:** Currently both the getter and setter share the same accessibility therefore you cannot have public bit-fields with private setters.
 
 #### Examples
@@ -246,7 +248,7 @@ static int Decode(uint value)
 
 ## Benchmarks
 
-The [benchmark workflow](https://github.com/RejectKid/BitsKit/actions/workflows/benchmarks.yml) measures the library's features on .NET 10 every week and on demand. The report covers LSB/MSB bit primitives and the array-, span-, and stream-backed readers and writers across supported bit widths. Relevant pull requests run one focused dry benchmark to validate the harness. Each run includes a readable, categorized results table in its workflow summary and downloadable Markdown, JSON, logs, and environment metadata for 90 days.
+The [benchmark workflow](https://github.com/RejectKid/BitsKit/actions/workflows/benchmarks.yml) measures the library's features on .NET 10 every week and on demand. The report covers LSB/MSB bit primitives, generated scalar accessors, and the array-, span-, and stream-backed readers and writers across supported bit widths. Relevant pull requests run one focused dry benchmark to validate the harness. Each run includes a readable, categorized results table in its workflow summary and downloadable Markdown, JSON, logs, and environment metadata for 90 days.
 
 The published timings show the cost of BitsKit's different operations on that hosted run. Use stable local hardware and attach its generated report when making a performance-regression claim.
 

@@ -182,6 +182,58 @@ internal abstract record BitFieldModel
     };
 
     /// <summary>
+    /// Creates a specialized scalar assignment for fixed-width integral backing fields.
+    /// </summary>
+    protected bool TryGetDirectIntegralWriteExpression(string valueExpression, out string expression)
+    {
+        expression = string.Empty;
+
+        if (!TryGetDirectIntegralInfo(
+            out int workingWidth,
+            out string unsignedType))
+        {
+            return false;
+        }
+
+        int shift = BitOffset;
+        ulong valueMask = BitCount == 64 ? ulong.MaxValue : (1UL << BitCount) - 1;
+        ulong shiftedMask = valueMask << shift;
+        string fieldMask = FormatMask(shiftedMask, workingWidth);
+        string backingType = FieldType!.Value.ToString();
+
+        expression =
+            $"{{4}} = unchecked(({backingType})((unchecked(({unsignedType}){{4}}) & ~{fieldMask}) | " +
+            $"((unchecked(({unsignedType})({valueExpression})) << {shift}) & {fieldMask})))";
+        return true;
+    }
+
+    private bool TryGetDirectIntegralInfo(
+        out int workingWidth,
+        out string unsignedType)
+    {
+        int backingWidth = FieldType switch
+        {
+            BitFieldType.SByte or BitFieldType.Byte => 8,
+            BitFieldType.Int16 or BitFieldType.UInt16 => 16,
+            BitFieldType.Int32 or BitFieldType.UInt32 => 32,
+            BitFieldType.Int64 or BitFieldType.UInt64 => 64,
+            _ => 0
+        };
+        workingWidth = backingWidth == 64 ? 64 : 32;
+        unsignedType = workingWidth == 64 ? "UInt64" : "UInt32";
+
+        return BackingFieldType == BackingFieldType.Integral &&
+               BitOrder == BitOrder.LeastSignificant &&
+               backingWidth != 0 &&
+               BitCount > 0 &&
+               BitOffset >= 0 &&
+               BitOffset + BitCount <= backingWidth;
+    }
+
+    private static string FormatMask(ulong mask, int width) =>
+        width == 64 ? $"0x{mask:X}UL" : $"0x{mask:X}U";
+
+    /// <summary>
     /// Determines if this field is ReadOnly based on it's BackingField and Modifiers
     /// </summary>
     protected bool IsReadOnly()

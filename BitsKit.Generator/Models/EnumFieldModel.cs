@@ -55,6 +55,9 @@ internal sealed record EnumFieldModel : BitFieldModel
 
     protected override string GetSetterTemplate()
     {
+        if (TryGetDirectIntegralWriteExpression("value", out string expression))
+            return "{0} {1} => " + expression + ";";
+
         return string.Format(StringConstants.ExplicitSetterTemplate, SetterSource(), FieldType);
     }
 }
