@@ -11,6 +11,7 @@ Notable changes to the community-maintained fork are documented here. This proje
 ### Changed
 
 - The source generator emits direct mask-and-shift setters for valid fixed-width, least-significant scalar fields, while retaining `BitPrimitives` for getters and for memory-backed, native-integer, reversed-order, and invalid-range cases.
+- Sequential `BitStreamReader` and `BitStreamWriter` single-bit operations use dedicated buffered fast paths while preserving existing seeking, EOF, and non-seekable-stream behavior.
 
 ### Fixed
 

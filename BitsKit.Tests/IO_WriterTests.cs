@@ -393,6 +393,37 @@ public class IO_WriterTests
     }
 
     [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void SequentialBitWritesMatchAcrossOutputBuffers(bool mostSignificant)
+    {
+        byte[] expected = new byte[8201];
+        Random random = new(0xB175);
+        using MemoryStream stream = new();
+        using BitStreamWriter writer = new(stream, true);
+
+        for (int bitOffset = 0; bitOffset < expected.Length * 8; bitOffset++)
+        {
+            bool value = random.Next(2) != 0;
+            if (mostSignificant)
+            {
+                Helpers.WriteBitsMSB(expected, bitOffset, value ? 1UL : 0UL, 1);
+                writer.WriteBitMSB(value);
+            }
+            else
+            {
+                Helpers.WriteBitsLSB(expected, bitOffset, value ? 1UL : 0UL, 1);
+                writer.WriteBitLSB(value);
+            }
+        }
+
+        writer.Flush();
+
+        Assert.AreEqual(expected.Length * 8, writer.Position);
+        CollectionAssert.AreEqual(expected, stream.ToArray());
+    }
+
+    [TestMethod]
     public void SeekingFlushesPendingOutputBeforeInPlaceWrite()
     {
         byte[] expected = new byte[5000];

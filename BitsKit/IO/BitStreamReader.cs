@@ -132,20 +132,20 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     /// <inheritdoc cref="IBitReader.ReadBitLSB"/>
     public bool ReadBitLSB()
     {
-        PopulateBuffer(1);
+        EnsureBitAvailable();
 
-        bool value = BitPrimitives.ReadBitLSB(CurrentBuffer, _bitsPos);
-        Advance(1);
+        bool value = (_buffer[_bufferIndex] & (1 << _bitsPos)) != 0;
+        AdvanceBit();
         return value;
     }
 
     /// <inheritdoc cref="IBitReader.ReadBitMSB"/>
     public bool ReadBitMSB()
     {
-        PopulateBuffer(1);
+        EnsureBitAvailable();
 
-        bool value = BitPrimitives.ReadBitMSB(CurrentBuffer, _bitsPos);
-        Advance(1);
+        bool value = (_buffer[_bufferIndex] & (1 << (7 - _bitsPos))) != 0;
+        AdvanceBit();
         return value;
     }
 
@@ -383,6 +383,28 @@ public sealed class BitStreamReader : IBitReader, IBitStream
 
     private ReadOnlySpan<byte> CurrentBuffer =>
         _buffer.AsSpan(_bufferIndex, Math.Max(1, _bufferLength - _bufferIndex));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void EnsureBitAvailable()
+    {
+        ThrowIfDisposed();
+
+        if (_bufferIndex >= _bufferLength)
+            PopulateBuffer(1);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void AdvanceBit()
+    {
+        _bitsPos++;
+        _position++;
+
+        if (_bitsPos == 8)
+        {
+            _bitsPos = 0;
+            _bufferIndex++;
+        }
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void Advance(int bitCount)
