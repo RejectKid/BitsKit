@@ -4,6 +4,8 @@ Notable changes to the community-maintained fork are documented here. This proje
 
 ## Unreleased
 
+## 1.3.1 - 2026-07-20
+
 ### Fixed
 
 - Release publication checks out the tagged repository before verifying and creating the GitHub Release.
