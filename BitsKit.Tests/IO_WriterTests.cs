@@ -326,4 +326,75 @@ public class IO_WriterTests
         // check we can't seek or buffer
         Assert.ThrowsExactly<NotSupportedException>(() => bitStreamWriter.Position = 0);
     }
+
+    [TestMethod]
+    public void ShortReadsAreCombinedForInPlaceWrites()
+    {
+        byte[] expected = Data[..];
+        byte[] actual = Data[..];
+        Helpers.WriteBitsLSB(expected, 3, 0x0123456789ABCDEF, 64);
+
+        using ShortReadMemoryStream stream = new(actual);
+        using BitStreamWriter writer = new(stream);
+        writer.Position = 3;
+
+        writer.WriteUInt64LSB(0x0123456789ABCDEF, 64);
+        writer.Flush();
+
+        CollectionAssert.AreEqual(expected, actual);
+    }
+
+    [TestMethod]
+    public void WritingPastEndInitializesNewBytes()
+    {
+        byte[] expected = new byte[9];
+        expected[0] = 0xA5;
+        Helpers.WriteBitsLSB(expected, 3, 0x0123456789ABCDEF, 64);
+
+        using MemoryStream stream = new();
+        stream.WriteByte(0xA5);
+        stream.Position = 0;
+        using BitStreamWriter writer = new(stream, true);
+        writer.Position = 3;
+
+        writer.WriteUInt64LSB(0x0123456789ABCDEF, 64);
+        writer.Flush();
+
+        CollectionAssert.AreEqual(expected, stream.ToArray());
+    }
+
+    [TestMethod]
+    public void ConstructorRejectsNonSeekableStream()
+    {
+        using NonSeekableWriteStream stream = new();
+
+        Assert.ThrowsExactly<NotSupportedException>(() => new BitStreamWriter(stream));
+    }
+
+    [TestMethod]
+    public void SupportsPositionsBeyondInt32ByteRange()
+    {
+        long bytePosition = (long)int.MaxValue + 42;
+        using SparseStream stream = new(bytePosition + 1);
+        using BitStreamWriter writer = new(stream, true);
+
+        writer.Position = bytePosition << 3;
+
+        Assert.AreEqual(bytePosition, stream.Position);
+        Assert.AreEqual(bytePosition << 3, writer.Position);
+    }
+
+    [TestMethod]
+    public void MembersThrowObjectDisposedExceptionAfterDispose()
+    {
+        using MemoryStream stream = new();
+        BitStreamWriter writer = new(stream, true);
+        writer.Dispose();
+
+        Assert.ThrowsExactly<ObjectDisposedException>(() => _ = writer.Position);
+        Assert.ThrowsExactly<ObjectDisposedException>(() => _ = writer.Length);
+        Assert.ThrowsExactly<ObjectDisposedException>(() => writer.WriteBitLSB(true));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => writer.Flush());
+        Assert.ThrowsExactly<ObjectDisposedException>(() => writer.Seek(0, SeekOrigin.Begin));
+    }
 }

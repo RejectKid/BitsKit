@@ -186,7 +186,8 @@ There are a number of IO types available under the `BitsKit.IO` namespace built 
 
 **Notes:** 
 - The array and span backed types support up to `int.MaxValue` bits as they use a signed integer for positioning to boost performance. This limits the source to being less than 0x10000000 bytes.
-- The `BitStreamWriter` class does support writing in-place however, the destination stream must be both readable and seekable to allowing buffering of the stream's existing data.
+- `BitStreamReader` throws `EndOfStreamException` when the source cannot supply all the bits requested by an operation.
+- `BitStreamWriter` requires a seekable destination. Writing in-place also requires the destination to be readable so its existing data can be preserved.
 
 ### Utility Methods
 Additional utilities for common bit processing tasks are provided under the `BitsKit.Utilities` namespace. Many of these functions have been taken from the awesome [Bit Twiddling Hacks](https://graphics.stanford.edu/~seander/bithacks.html) page created by Sean Eron Anderson.

@@ -4,6 +4,12 @@ Notable changes to the community-maintained fork are documented here. This proje
 
 ## Unreleased
 
+### Fixed
+
+- Stream reads now handle partial `Stream.Read` results and throw `EndOfStreamException` instead of returning stale data when the source ends early.
+- In-place stream writes preserve existing data across partial reads and initialize bytes written beyond the end of the stream.
+- Stream readers and writers support bit positions whose byte offset exceeds `Int32.MaxValue` and consistently throw `ObjectDisposedException` after disposal.
+
 ## 1.3.1 - 2026-07-20
 
 ### Fixed

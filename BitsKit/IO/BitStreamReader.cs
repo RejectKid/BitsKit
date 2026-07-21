@@ -10,12 +10,23 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     /// <inheritdoc cref="IBitStream.Position"/>
     public long Position
     {
-        get => (_stream.Position << 3) - ((8 - _bitsPos) & 7);
+        get
+        {
+            ThrowIfDisposed();
+            return (_stream.Position << 3) - ((8 - _bitsPos) & 7);
+        }
         set => SetPosition(value);
     }
 
     /// <inheritdoc cref="IBitStream.Length"/>
-    public long Length => _stream.Length << 3;
+    public long Length
+    {
+        get
+        {
+            ThrowIfDisposed();
+            return _stream.Length << 3;
+        }
+    }
 
     private Stream _stream;
     private byte[] _buffer;
@@ -88,8 +99,13 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     /// <inheritdoc cref="IBitReader.ReadBitLSB"/>
     public bool ReadBitLSB()
     {
+        ThrowIfDisposed();
+
         if (_bitsPos == 0)
-            _buffLen = _stream.Read(_buffer, 0, 1);
+        {
+            ReadExactly(_buffer.AsSpan(0, 1));
+            _buffLen = 1;
+        }
 
         bool value = BitPrimitives.ReadBitLSB(_buffer, _bitsPos);
         _bitsPos = (_bitsPos + 1) & 7;
@@ -99,8 +115,13 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     /// <inheritdoc cref="IBitReader.ReadBitMSB"/>
     public bool ReadBitMSB()
     {
+        ThrowIfDisposed();
+
         if (_bitsPos == 0)
-            _buffLen = _stream.Read(_buffer, 0, 1);
+        {
+            ReadExactly(_buffer.AsSpan(0, 1));
+            _buffLen = 1;
+        }
 
         bool value = BitPrimitives.ReadBitMSB(_buffer, _bitsPos);
         _bitsPos = (_bitsPos + 1) & 7;
@@ -271,43 +292,72 @@ public sealed class BitStreamReader : IBitReader, IBitStream
 
     private void PopulateBuffer(int bitCount)
     {
+        ThrowIfDisposed();
+
         // calculate the number of whole bytes to buffer
         int bitsBuffered = (8 - _bitsPos) & 7;
         int bytesRequired = (bitCount - bitsBuffered + 7) >> 3;
 
         // preserve the last byte which may contain unread bits
-        if (_buffLen != 1)
+        if (_buffLen > 1)
             _buffer[0] = _buffer[_buffLen - 1];
+
+        _buffLen = 1;
 
         if (bytesRequired != 0)
         {
-            if (_bitsPos != 0)
-                _buffLen = _stream.Read(_buffer, 1, bytesRequired) + 1;
-            else
-                _buffLen = _stream.Read(_buffer, 0, bytesRequired);
+            int offset = _bitsPos == 0 ? 0 : 1;
+            ReadExactly(_buffer.AsSpan(offset, bytesRequired));
+            _buffLen = offset + bytesRequired;
         }
     }
 
     private void SetPosition(long position)
     {
+        ThrowIfDisposed();
+
         if (position < 0)
             IBitStream.ThrowNegativePositionException();
 
         // calculate offsets
-        int bytePos = (int)(position >> 3);
+        long bytePos = position >> 3;
         int bitsPos = (int)(position & 7);
+        long streamPosition = bytePos + (bitsPos == 0 ? 0 : 1);
 
         // check if this is a Seek operation
-        if ((position + 7) >> 3 != _stream.Position)
+        if (streamPosition != _stream.Position)
         {
             // update the stream position
             _stream.Position = bytePos;
 
             // buffer the current byte if not aligned
             if (bitsPos != 0)
-                _buffLen = _stream.Read(_buffer, 0, 1);
+            {
+                ReadExactly(_buffer.AsSpan(0, 1));
+                _buffLen = 1;
+            }
         }
 
         _bitsPos = bitsPos;
+    }
+
+    private void ReadExactly(Span<byte> buffer)
+    {
+        ThrowIfDisposed();
+
+        while (!buffer.IsEmpty)
+        {
+            int bytesRead = _stream.Read(buffer);
+            if (bytesRead == 0)
+                throw new EndOfStreamException();
+
+            buffer = buffer[bytesRead..];
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(BitStreamReader));
     }
 }
