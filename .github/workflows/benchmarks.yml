@@ -8,6 +8,7 @@ on:
       - 'BitsKit/**'
       - 'BitsKit.Benchmarks/**'
       - 'Directory.Build.props'
+      - 'eng/Run-Benchmarks.ps1'
   schedule:
     - cron: '17 5 * * 0'
   workflow_dispatch:

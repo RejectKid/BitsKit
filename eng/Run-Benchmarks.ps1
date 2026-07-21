@@ -17,7 +17,9 @@ param(
 
     [string] $ArtifactsPath = 'artifacts/benchmarks',
 
-    [switch] $NoRestore
+    [switch] $NoRestore,
+
+    [switch] $List
 )
 
 $ErrorActionPreference = 'Stop'
@@ -38,16 +40,34 @@ if ($NoRestore) {
 $arguments += @(
     '--',
     '--filter', $Filter,
-    '--job', $Job,
     '--anyCategories'
 )
 $arguments += $Category
-$arguments += @(
-    '--exporters', 'markdown', 'json',
-    '--artifacts', $ArtifactsPath
-)
 
-& dotnet @arguments
-if ($LASTEXITCODE -ne 0) {
-    exit $LASTEXITCODE
+if ($List) {
+    $arguments += @('--list', 'flat')
+}
+else {
+    $arguments += @(
+        '--job', $Job,
+        '--exporters', 'markdown', 'json',
+        '--artifacts', $ArtifactsPath
+    )
+}
+
+# PowerShell expands native-command wildcard arguments before invoking the
+# process. ArgumentList preserves filters such as '*' as literal arguments.
+$startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+$startInfo.FileName = 'dotnet'
+$startInfo.UseShellExecute = $false
+
+foreach ($argument in $arguments) {
+    [void] $startInfo.ArgumentList.Add($argument)
+}
+
+$process = [System.Diagnostics.Process]::Start($startInfo)
+$process.WaitForExit()
+
+if ($process.ExitCode -ne 0) {
+    exit $process.ExitCode
 }
