@@ -5,7 +5,7 @@ namespace BitsKit.Benchmarks;
 
 public partial class BitsKitBenchmark
 {
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt1Operations)]
     [BenchmarkCategory("MemoryBitWriter", "UInt1")]
     public int MemoryBitWriterBit()
     {
@@ -26,7 +26,7 @@ public partial class BitsKitBenchmark
 
         return 0;
     }
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt4Operations)]
     [BenchmarkCategory("MemoryBitWriter", "UInt4")]
     public int MemoryBitWriterUInt04()
     {
@@ -49,7 +49,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt8Operations)]
     [BenchmarkCategory("MemoryBitWriter", "UInt8")]
     public int MemoryBitWriterUInt08()
     {
@@ -72,7 +72,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt16Operations)]
     [BenchmarkCategory("MemoryBitWriter", "UInt16")]
     public int MemoryBitWriterUInt16()
     {
@@ -95,7 +95,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt32Operations)]
     [BenchmarkCategory("MemoryBitWriter", "UInt32")]
     public int MemoryBitWriterUInt32()
     {
@@ -118,7 +118,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt64Operations)]
     [BenchmarkCategory("MemoryBitWriter", "UInt64")]
     public int MemoryBitWriterUInt64()
     {

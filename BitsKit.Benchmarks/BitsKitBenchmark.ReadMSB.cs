@@ -6,7 +6,7 @@ namespace BitsKit.Benchmarks;
 
 public partial class BitsKitBenchmark
 {
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt1Operations)]
     [BenchmarkCategory("BitPrimitivesReadMSB", "Loop", "UInt1")]
     public int Read1BitMSB_Loop()
     {
@@ -29,7 +29,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt1Operations)]
     [BenchmarkCategory("BitPrimitivesReadMSB", "BitsKit", "UInt1")]
     public int Read1BitMSB_BitsKit()
     {
@@ -52,7 +52,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt4Operations)]
     [BenchmarkCategory("BitPrimitivesReadMSB", "Loop", "UInt4")]
     public int Read4BitMSB_Loop()
     {
@@ -75,7 +75,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt4Operations)]
     [BenchmarkCategory("BitPrimitivesReadMSB", "BitsKit", "UInt4")]
     public int Read4BitMSB_BitsKit()
     {
@@ -98,7 +98,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt16Operations)]
     [BenchmarkCategory("BitPrimitivesReadMSB", "Loop", "UInt16")]
     public int Read16BitMSB_Loop()
     {
@@ -121,7 +121,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt16Operations)]
     [BenchmarkCategory("BitPrimitivesReadMSB", "BitsKit", "UInt16")]
     public int Read16BitMSB_BitsKit()
     {
@@ -144,7 +144,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt32Operations)]
     [BenchmarkCategory("BitPrimitivesReadMSB", "Loop", "UInt32")]
     public int Read32BitMSB_Loop()
     {
@@ -167,7 +167,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt32Operations)]
     [BenchmarkCategory("BitPrimitivesReadMSB", "BitsKit", "UInt32")]
     public int Read32BitMSB_BitsKit()
     {
@@ -190,7 +190,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt64Operations)]
     [BenchmarkCategory("BitPrimitivesReadMSB", "Loop", "UInt64")]
     public int Read64BitMSB_Loop()
     {
@@ -213,7 +213,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt64Operations)]
     [BenchmarkCategory("BitPrimitivesReadMSB", "BitsKit", "UInt64")]
     public int Read64BitMSB_BitsKit()
     {

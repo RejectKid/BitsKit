@@ -6,7 +6,7 @@ namespace BitsKit.Benchmarks;
 public partial class BitsKitBenchmark
 {
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt1Operations)]
     [BenchmarkCategory("BitStreamReader", "UInt1")]
     public int BitStreamReaderBit()
     {
@@ -28,7 +28,7 @@ public partial class BitsKitBenchmark
 
         return 0;
     }
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt4Operations)]
     [BenchmarkCategory("BitStreamReader", "UInt4")]
     public int BitStreamReaderUInt04()
     {
@@ -52,7 +52,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt8Operations)]
     [BenchmarkCategory("BitStreamReader", "UInt8")]
     public int BitStreamReaderUInt08()
     {
@@ -76,7 +76,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt16Operations)]
     [BenchmarkCategory("BitStreamReader", "UInt16")]
     public int BitStreamReaderUInt16()
     {
@@ -100,7 +100,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt32Operations)]
     [BenchmarkCategory("BitStreamReader", "UInt32")]
     public int BitStreamReaderUInt32()
     {
@@ -124,7 +124,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt32Operations)]
     [BenchmarkCategory("BitStreamReader", "UInt32", "Unaligned")]
     public int BitStreamReaderUInt32Unaligned()
     {
@@ -149,7 +149,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt64Operations)]
     [BenchmarkCategory("BitStreamReader", "UInt64")]
     public int BitStreamReaderUInt64()
     {

@@ -6,7 +6,7 @@ namespace BitsKit.Benchmarks;
 
 public partial class BitsKitBenchmark
 {
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt1Operations)]
     [BenchmarkCategory("BitPrimitivesWriteLSB", "Loop", "UInt1")]
     public int Write1BitLSB_Loop()
     {
@@ -29,7 +29,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt1Operations)]
     [BenchmarkCategory("BitPrimitivesWriteLSB", "BitsKit", "UInt1")]
     public int Write1BitLSB_BitsKit()
     {
@@ -52,7 +52,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt4Operations)]
     [BenchmarkCategory("BitPrimitivesWriteLSB", "Loop", "UInt4")]
     public int Write4BitLSB_Loop()
     {
@@ -75,7 +75,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt4Operations)]
     [BenchmarkCategory("BitPrimitivesWriteLSB", "BitsKit", "UInt4")]
     public int Write4BitLSB_BitsKit()
     {
@@ -98,7 +98,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt16Operations)]
     [BenchmarkCategory("BitPrimitivesWriteLSB", "Loop", "UInt16")]
     public int Write16BitLSB_Loop()
     {
@@ -121,7 +121,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt16Operations)]
     [BenchmarkCategory("BitPrimitivesWriteLSB", "BitsKit", "UInt16")]
     public int Write16BitLSB_BitsKit()
     {
@@ -144,7 +144,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt32Operations)]
     [BenchmarkCategory("BitPrimitivesWriteLSB", "Loop", "UInt32")]
     public int Write32BitLSB_Loop()
     {
@@ -167,7 +167,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt32Operations)]
     [BenchmarkCategory("BitPrimitivesWriteLSB", "BitsKit", "UInt32")]
     public int Write32BitLSB_BitsKit()
     {
@@ -190,7 +190,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt64Operations)]
     [BenchmarkCategory("BitPrimitivesWriteLSB", "Loop", "UInt64")]
     public int Write64BitLSB_Loop()
     {
@@ -213,7 +213,7 @@ public partial class BitsKitBenchmark
         return 0;
     }
 
-    [Benchmark]
+    [Benchmark(OperationsPerInvoke = UInt64Operations)]
     [BenchmarkCategory("BitPrimitivesWriteLSB", "BitsKit", "UInt64")]
     public int Write64BitLSB_BitsKit()
     {
