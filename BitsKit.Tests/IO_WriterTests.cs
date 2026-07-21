@@ -457,11 +457,70 @@ public class IO_WriterTests
     }
 
     [TestMethod]
-    public void ConstructorRejectsNonSeekableStream()
+    public void WritesSequentiallyToNonSeekableStream()
     {
+        byte[] expected = new byte[4];
+        Helpers.WriteBitsLSB(expected, 0, 0b101, 3);
+        Helpers.WriteBitsLSB(expected, 3, 0xABCD, 16);
+        expected[3] = 0x5A;
         using NonSeekableWriteStream stream = new();
+        using BitStreamWriter writer = new(stream, true);
 
-        Assert.ThrowsExactly<NotSupportedException>(() => new BitStreamWriter(stream));
+        writer.WriteUInt8LSB(0b101, 3);
+        writer.WriteUInt16LSB(0xABCD, 16);
+
+        Assert.AreEqual(19, writer.Position);
+        Assert.AreEqual(16, writer.Length);
+        Assert.ThrowsExactly<NotSupportedException>(() => writer.Position = 0);
+        Assert.ThrowsExactly<NotSupportedException>(() => writer.Seek(0, SeekOrigin.Begin));
+
+        writer.Flush();
+
+        Assert.AreEqual(24, writer.Position);
+        Assert.AreEqual(24, writer.Length);
+        CollectionAssert.AreEqual(expected[..3], stream.ToArray());
+
+        writer.WriteUInt8LSB(0x5A, 8);
+        writer.Flush();
+
+        Assert.AreEqual(32, writer.Position);
+        Assert.AreEqual(32, writer.Length);
+        CollectionAssert.AreEqual(expected, stream.ToArray());
+    }
+
+    [TestMethod]
+    public void RandomizedNonSeekableWritesMatchAcrossOutputBuffers()
+    {
+        byte[] expected = new byte[8201];
+        Random random = new(0xF04D);
+        using NonSeekableWriteStream stream = new();
+        using BitStreamWriter writer = new(stream, true);
+        int bitOffset = 0;
+
+        while (bitOffset < expected.Length * 8)
+        {
+            int bitCount = Math.Min(random.Next(1, 65), (expected.Length * 8) - bitOffset);
+            ulong value = ((ulong)(uint)random.Next() << 32) | (uint)random.Next();
+
+            if ((bitOffset & 1) == 0)
+            {
+                Helpers.WriteBitsLSB(expected, bitOffset, value, bitCount);
+                writer.WriteUInt64LSB(value, bitCount);
+            }
+            else
+            {
+                Helpers.WriteBitsMSB(expected, bitOffset, value, bitCount);
+                writer.WriteUInt64MSB(value, bitCount);
+            }
+
+            bitOffset += bitCount;
+        }
+
+        writer.Flush();
+
+        Assert.AreEqual(expected.Length * 8, writer.Position);
+        Assert.AreEqual(expected.Length * 8, writer.Length);
+        CollectionAssert.AreEqual(expected, stream.ToArray());
     }
 
     [TestMethod]

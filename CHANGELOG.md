@@ -4,6 +4,10 @@ Notable changes to the community-maintained fork are documented here. This proje
 
 ## Unreleased
 
+### Added
+
+- `BitStreamWriter` supports sequential output to non-seekable streams such as compression, encryption, and network streams.
+
 ## 1.4.0 - 2026-07-20
 
 ### Changed

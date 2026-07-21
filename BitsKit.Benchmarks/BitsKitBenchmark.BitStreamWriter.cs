@@ -150,6 +150,31 @@ public partial class BitsKitBenchmark
     }
 
     [Benchmark]
+    [BenchmarkCategory("BitStreamWriter", "UInt32", "Aligned", "ForwardOnly")]
+    public long BitStreamWriterUInt32ForwardOnly()
+    {
+        const int bitCount = 32;
+        int maxNumIterations = BufferSize / bitCount;
+        using var stream = new ForwardOnlyWriteStream();
+        using var writer = new BitStreamWriter(stream);
+
+        for (var numIterations = 0; numIterations < maxNumIterations; numIterations++)
+        {
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+            writer.WriteUInt32MSB((uint)numIterations, bitCount);
+        }
+
+        writer.Flush();
+        return stream.BytesWritten;
+    }
+
+    [Benchmark]
     [BenchmarkCategory("BitStreamWriter", "UInt64")]
     public int BitStreamWriterUInt64()
     {
@@ -171,5 +196,32 @@ public partial class BitsKitBenchmark
         }
 
         return 0;
+    }
+
+    private sealed class ForwardOnlyWriteStream : Stream
+    {
+        public long BytesWritten { get; private set; }
+
+        public override bool CanRead => false;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => BytesWritten += count;
+        public override void Write(ReadOnlySpan<byte> buffer) => BytesWritten += buffer.Length;
+        public override void WriteByte(byte value) => BytesWritten++;
     }
 }
