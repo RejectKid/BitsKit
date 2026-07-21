@@ -1,0 +1,80 @@
+name: Original performance regression
+
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: BenchmarkDotNet job length
+        required: true
+        default: Medium
+        type: choice
+        options:
+          - Dry
+          - Short
+          - Medium
+          - Long
+      regression_tolerance_percent:
+        description: Maximum allowed slowdown per operation
+        required: true
+        default: '5'
+        type: string
+      enforce:
+        description: Fail when any operation exceeds the tolerance
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: original-performance-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  compare:
+    name: Compare with original BitsKit
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Compare fork-point and current performance
+        shell: pwsh
+        env:
+          BENCHMARK_JOB: ${{ inputs.job }}
+          REGRESSION_TOLERANCE: ${{ inputs.regression_tolerance_percent }}
+          ENFORCE_REGRESSIONS: ${{ inputs.enforce }}
+        run: |
+          $parameters = @{
+            Job = $env:BENCHMARK_JOB
+            RegressionTolerancePercent = [double]::Parse(
+              $env:REGRESSION_TOLERANCE,
+              [Globalization.CultureInfo]::InvariantCulture)
+            ArtifactsPath = 'artifacts/benchmark-regression'
+          }
+          if ($env:ENFORCE_REGRESSIONS -eq 'true') {
+            $parameters.Enforce = $true
+          }
+
+          ./eng/Run-Benchmark-Regression.ps1 @parameters
+
+      - name: Upload comparison reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: original-performance-regression
+          path: artifacts/benchmark-regression
+          if-no-files-found: warn
+          retention-days: 90

@@ -7,6 +7,7 @@ Notable changes to the community-maintained fork are documented here. This proje
 ### Added
 
 - `BitStreamWriter` supports sequential output to non-seekable streams such as compression, encryption, and network streams.
+- An on-demand performance regression workflow compares the 56 operations shared with the original BitsKit fork point and can enforce a configurable slowdown tolerance.
 
 ### Changed
 
