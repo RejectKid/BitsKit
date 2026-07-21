@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using BitsKit.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -187,5 +188,75 @@ public class IO_ReaderTests
         Assert.AreEqual(expected, readerValue, "BitReader");
         Assert.AreEqual(expected, memoryValue, "MemoryBitReader");
         Assert.AreEqual(expected, streamValue, "BitStreamReader");
+    }
+
+    [TestMethod]
+    public void ShortReadsAreCombined()
+    {
+        using ShortReadMemoryStream stream = new(Data);
+        using BitStreamReader reader = new(stream);
+
+        ulong expected = Helpers.ReadBitsLSB(Data, 0, 64);
+
+        Assert.AreEqual(expected, reader.ReadUInt64LSB(64));
+        Assert.AreEqual(64, reader.Position);
+    }
+
+    [TestMethod]
+    public void ReadingBitAtEndThrowsEndOfStreamException()
+    {
+        using MemoryStream stream = new([0xA5]);
+        using BitStreamReader reader = new(stream);
+
+        reader.ReadUInt8LSB(8);
+
+        Assert.ThrowsExactly<EndOfStreamException>(() => reader.ReadBitLSB());
+    }
+
+    [TestMethod]
+    public void ReadingValuePastEndThrowsEndOfStreamException()
+    {
+        using MemoryStream stream = new([0xA5]);
+        using BitStreamReader reader = new(stream);
+
+        Assert.ThrowsExactly<EndOfStreamException>(() => reader.ReadUInt16LSB(16));
+    }
+
+    [TestMethod]
+    public void ReadingUnalignedValuePastEndThrowsEndOfStreamException()
+    {
+        using MemoryStream stream = new([0xA5]);
+        using BitStreamReader reader = new(stream);
+
+        reader.ReadUInt8LSB(7);
+
+        Assert.ThrowsExactly<EndOfStreamException>(() => reader.ReadUInt8LSB(2));
+    }
+
+    [TestMethod]
+    public void SupportsPositionsBeyondInt32ByteRange()
+    {
+        long bytePosition = (long)int.MaxValue + 42;
+        using SparseStream stream = new(bytePosition + 1);
+        using BitStreamReader reader = new(stream);
+
+        reader.Position = bytePosition << 3;
+
+        Assert.AreEqual(bytePosition, stream.Position);
+        Assert.IsFalse(reader.ReadBitLSB());
+        Assert.AreEqual((bytePosition << 3) + 1, reader.Position);
+    }
+
+    [TestMethod]
+    public void MembersThrowObjectDisposedExceptionAfterDispose()
+    {
+        using MemoryStream stream = new([0xA5]);
+        BitStreamReader reader = new(stream, true);
+        reader.Dispose();
+
+        Assert.ThrowsExactly<ObjectDisposedException>(() => _ = reader.Position);
+        Assert.ThrowsExactly<ObjectDisposedException>(() => _ = reader.Length);
+        Assert.ThrowsExactly<ObjectDisposedException>(() => reader.ReadBitLSB());
+        Assert.ThrowsExactly<ObjectDisposedException>(() => reader.Seek(0, SeekOrigin.Begin));
     }
 }

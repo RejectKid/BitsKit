@@ -16,12 +16,23 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
     /// <inheritdoc cref="IBitStream.Position"/>
     public long Position
     {
-        get => (_stream.Position << 3) + _bitsPos;
+        get
+        {
+            ThrowIfDisposed();
+            return (_stream.Position << 3) + _bitsPos;
+        }
         set => SetPosition(value);
     }
 
     /// <inheritdoc cref="IBitStream.Length"/>
-    public long Length => _stream.Length << 3;
+    public long Length
+    {
+        get
+        {
+            ThrowIfDisposed();
+            return _stream.Length << 3;
+        }
+    }
 
     private Stream _stream;
     private byte _buffer;
@@ -46,7 +57,7 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
     /// <param name="source"></param>
     /// <param name="leaveOpen"></param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> is null.</exception>
-    /// <exception cref="NotSupportedException">Thrown when <paramref name="source"/> does not support writing.</exception>
+    /// <exception cref="NotSupportedException">Thrown when <paramref name="source"/> does not support writing or seeking.</exception>
     public BitStreamWriter(Stream source, bool leaveOpen)
     {
         if (source is null)
@@ -55,9 +66,12 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
         if (!source.CanWrite)
             throw new NotSupportedException("Stream does not support writing.");
 
+        if (!source.CanSeek)
+            throw new NotSupportedException("Stream does not support seeking.");
+
         _stream = source;
         _leaveOpen = leaveOpen;
-        
+
         ResetBuffer();
     }
 
@@ -79,6 +93,8 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
     /// </summary>
     public void Flush()
     {
+        ThrowIfDisposed();
+
         // write any buffered bits
         if (_bitsPos != 0)
         {
@@ -299,7 +315,13 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
         // if this is mid-stream, buffer the next byte
         if (_stream.Position < _stream.Length)
         {
-            _buffer = (byte)_stream.ReadByte();
+            EnsureReadableForInPlaceWrite();
+
+            int value = _stream.ReadByte();
+            if (value < 0)
+                throw new EndOfStreamException();
+
+            _buffer = (byte)value;
             _stream.Position -= 1;
         }
     }
@@ -307,12 +329,26 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void PopulateWriteBuffer(Span<byte> buffer)
     {
+        ThrowIfDisposed();
+        buffer.Clear();
+
         // if this is a mid-stream write then populate the buffer
         // with the existing data to allow writing in-place
         if (_stream.Position < _stream.Length)
         {
-            int read = _stream.Read(buffer);
-            _stream.Position -= read;
+            EnsureReadableForInPlaceWrite();
+
+            long position = _stream.Position;
+            int bytesToRead = (int)Math.Min(buffer.Length, _stream.Length - position);
+
+            try
+            {
+                ReadExactly(buffer[..bytesToRead]);
+            }
+            finally
+            {
+                _stream.Position = position;
+            }
         }
 
         // preserve any unwritten bits
@@ -338,15 +374,17 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
 
     private void SetPosition(long position)
     {
+        ThrowIfDisposed();
+
         if (position < 0)
             IBitStream.ThrowNegativePositionException();
 
         // calculate offsets
-        int bytePos = (int)(position >> 3);
+        long bytePos = position >> 3;
         int bitsPos = (int)(position & 7);
 
         // check if this is a Seek operation
-        if ((position + 7) >> 3 != _stream.Position)
+        if (bytePos != _stream.Position)
         {
             // write any buffered bits
             Flush();
@@ -357,5 +395,29 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
         }
 
         _bitsPos = bitsPos;
+    }
+
+    private void ReadExactly(Span<byte> buffer)
+    {
+        while (!buffer.IsEmpty)
+        {
+            int bytesRead = _stream.Read(buffer);
+            if (bytesRead == 0)
+                throw new EndOfStreamException();
+
+            buffer = buffer[bytesRead..];
+        }
+    }
+
+    private void EnsureReadableForInPlaceWrite()
+    {
+        if (!_stream.CanRead)
+            throw new NotSupportedException("Writing within existing stream data requires a readable stream.");
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(BitStreamWriter));
     }
 }
