@@ -4,6 +4,12 @@ Notable changes to the community-maintained fork are documented here. This proje
 
 ## Unreleased
 
+### Fixed
+
+- Release publication checks out the tagged repository before verifying and creating the GitHub Release.
+
+## 1.3.0 - 2026-07-20
+
 ### Added
 
 - Cross-platform continuous integration for .NET 8 and .NET 10.
