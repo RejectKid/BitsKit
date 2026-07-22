@@ -50,7 +50,10 @@ internal sealed record EnumFieldModel : BitFieldModel
 
     protected override string GetGetterTemplate()
     {
-        if (TryGetDirectMemoryReadExpression(out string expression) ||
+        if (TryGetDirectFixedWidthReadTemplate(out string template))
+            return template;
+
+        if (TryGetDirectStorageReadExpression(out string expression) ||
             TryGetDirectIntegralReadExpression(out expression))
             return $"{{0}} {{1}} => ({ReturnType})({expression});";
 
@@ -59,7 +62,10 @@ internal sealed record EnumFieldModel : BitFieldModel
 
     protected override string GetSetterTemplate()
     {
-        if (TryGetDirectMemoryWriteExpression("value", out string expression) ||
+        if (TryGetDirectFixedWidthWriteTemplate("value", out string template))
+            return template;
+
+        if (TryGetDirectStorageWriteExpression("value", out string expression) ||
             TryGetDirectIntegralWriteExpression("value", out expression))
             return "{0} {1} => " + expression + ";";
 

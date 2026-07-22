@@ -60,6 +60,22 @@ public partial struct GeneratedAccessorMemoryModel
     [BitField(5)]
     [BitField("Value", 11, BitFieldType.UInt32)]
     public Memory<byte> BackingField;
+
+    [BitField(5)]
+    [BooleanField("Flag")]
+    public Memory<byte> BooleanBackingField;
+
+    [BitField(3)]
+    [BitField("Value12", 12, BitFieldType.UInt32)]
+    public Memory<byte> BackingField12;
+
+    [BitField(5)]
+    [BitField("Value24", 24, BitFieldType.UInt32)]
+    public Memory<byte> BackingField24;
+
+    [BitField(7)]
+    [BitField("Value48", 48, BitFieldType.UInt64)]
+    public Memory<byte> BackingField48;
 }
 
 [BitObject(BitOrder.LeastSignificant)]
@@ -72,6 +88,17 @@ public partial struct GeneratedAccessorAlignedMemoryModel
     public Memory<byte> UInt64BackingField;
 }
 
+[BitObject(BitOrder.LeastSignificant)]
+public ref partial struct GeneratedAccessorAlignedSpanModel
+{
+    [BitField("UInt32Value", 32, BitFieldType.UInt32)]
+    public Span<byte> UInt32BackingField;
+
+    [BitField(5)]
+    [BooleanField("Flag")]
+    public Span<byte> BooleanBackingField;
+}
+
 #if NET8_0_OR_GREATER
 
 [BitObject(BitOrder.LeastSignificant)]
@@ -80,6 +107,14 @@ public partial struct GeneratedAccessorInlineArrayModel
 {
     [BitField(5)]
     [BitField("Value", 11, BitFieldType.UInt32, Modifiers = BitFieldModifiers.ReadOnly)]
+    private byte _element;
+}
+
+[BitObject(BitOrder.LeastSignificant)]
+[System.Runtime.CompilerServices.InlineArray(4)]
+public partial struct GeneratedAccessorAlignedInlineArrayModel
+{
+    [BitField("UInt32Value", 32, BitFieldType.UInt32)]
     private byte _element;
 }
 

@@ -474,6 +474,108 @@ public class GeneratorTests
     }
 
     [TestMethod]
+    public void SpecializedStorageAccessorsMatchReferenceBits()
+    {
+        Random random = new(0x5EEC1A1);
+
+        for (int i = 0; i < 1000; i++)
+        {
+            byte[] bytes11 = new byte[(i & 1) == 0 ? 2 : 4];
+            byte[] signedBytes12 = new byte[(i & 1) == 0 ? 2 : 4];
+            byte[] bigEndianBytes24 = new byte[4];
+            byte[] bigEndianBytes48 = new byte[(i & 1) == 0 ? 7 : 8];
+            random.NextBytes(bytes11);
+            random.NextBytes(signedBytes12);
+            random.NextBytes(bigEndianBytes24);
+            random.NextBytes(bigEndianBytes48);
+
+            var memory = new SpecializedMemoryAccessorStruct
+            {
+                Backing11 = bytes11,
+                SignedBacking12 = signedBytes12,
+                BigEndianBacking24 = bigEndianBytes24,
+                BigEndianBacking48 = bigEndianBytes48
+            };
+
+            Assert.AreEqual((uint)Helpers.ReadBitsLSB(bytes11, 5, 11), memory.Value11);
+            int expectedSigned12 = (int)Helpers.ReadBitsLSB(signedBytes12, 3, 12);
+            expectedSigned12 = (expectedSigned12 << 20) >> 20;
+            Assert.AreEqual(expectedSigned12, memory.SignedValue12);
+            Assert.AreEqual((uint)Helpers.ReadBitsMSB(bigEndianBytes24, 5, 24), memory.BigEndianValue24);
+            Assert.AreEqual(Helpers.ReadBitsMSB(bigEndianBytes48, 7, 48), memory.BigEndianValue48);
+
+            uint next11 = (uint)random.Next(1 << 11);
+            int nextSigned12 = random.Next(-(1 << 11), 1 << 11);
+            uint next24 = unchecked((uint)random.Next()) & 0xFFFFFF;
+            ulong next48 = unchecked((ulong)random.NextInt64()) & 0xFFFFFFFFFFFFUL;
+            byte[] expected11 = (byte[])bytes11.Clone();
+            byte[] expectedSigned12Bytes = (byte[])signedBytes12.Clone();
+            byte[] expected24 = (byte[])bigEndianBytes24.Clone();
+            byte[] expected48 = (byte[])bigEndianBytes48.Clone();
+            Helpers.WriteBitsLSB(expected11, 5, next11, 11);
+            Helpers.WriteBitsLSB(expectedSigned12Bytes, 3, unchecked((ulong)nextSigned12), 12);
+            Helpers.WriteBitsMSB(expected24, 5, next24, 24);
+            Helpers.WriteBitsMSB(expected48, 7, next48, 48);
+
+            memory.Value11 = next11;
+            memory.SignedValue12 = nextSigned12;
+            memory.BigEndianValue24 = next24;
+            memory.BigEndianValue48 = next48;
+
+            CollectionAssert.AreEqual(expected11, bytes11);
+            CollectionAssert.AreEqual(expectedSigned12Bytes, signedBytes12);
+            CollectionAssert.AreEqual(expected24, bigEndianBytes24);
+            CollectionAssert.AreEqual(expected48, bigEndianBytes48);
+
+            byte[] alignedBytes = new byte[4];
+            byte[] booleanBytes = new byte[1];
+            random.NextBytes(alignedBytes);
+            random.NextBytes(booleanBytes);
+            var span = new SpecializedSpanAccessorStruct
+            {
+                AlignedBacking = alignedBytes,
+                BooleanBacking = booleanBytes,
+                ReadOnlyAlignedBacking = alignedBytes
+            };
+
+            Assert.AreEqual((uint)Helpers.ReadBitsLSB(alignedBytes, 0, 32), span.AlignedValue);
+            Assert.AreEqual((uint)Helpers.ReadBitsLSB(alignedBytes, 0, 32), span.ReadOnlyAlignedValue);
+            Assert.AreEqual(Helpers.ReadBitsLSB(booleanBytes, 5, 1) != 0, span.Flag);
+            Assert.AreEqual(Helpers.ReadBitsMSB(booleanBytes, 6, 1) != 0, span.BigEndianFlag);
+
+            uint nextAligned = unchecked((uint)random.NextInt64());
+            bool nextFlag = (i & 1) != 0;
+            bool nextBigEndianFlag = (i & 2) != 0;
+            byte[] expectedAligned = (byte[])alignedBytes.Clone();
+            byte[] expectedBoolean = (byte[])booleanBytes.Clone();
+            Helpers.WriteBitsLSB(expectedAligned, 0, nextAligned, 32);
+            Helpers.WriteBitsLSB(expectedBoolean, 5, nextFlag ? 1UL : 0UL, 1);
+            Helpers.WriteBitsMSB(expectedBoolean, 6, nextBigEndianFlag ? 1UL : 0UL, 1);
+            span.AlignedValue = nextAligned;
+            span.Flag = nextFlag;
+            span.BigEndianFlag = nextBigEndianFlag;
+            CollectionAssert.AreEqual(expectedAligned, alignedBytes);
+            CollectionAssert.AreEqual(expectedBoolean, booleanBytes);
+
+#if NET8_0_OR_GREATER
+            var alignedInline = new SpecializedAlignedInlineArrayAccessorStruct();
+            alignedBytes.CopyTo((Span<byte>)alignedInline);
+            Assert.AreEqual((uint)Helpers.ReadBitsLSB(alignedBytes, 0, 32), alignedInline.Value);
+            alignedInline.Value = nextAligned;
+            Assert.AreEqual(nextAligned, (uint)Helpers.ReadBitsLSB((ReadOnlySpan<byte>)alignedInline, 0, 32));
+
+            var booleanInline = new SpecializedBooleanInlineArrayAccessorStruct();
+            booleanInline[0] = booleanBytes[0];
+            Assert.AreEqual(Helpers.ReadBitsLSB(booleanBytes, 5, 1) != 0, booleanInline.Flag);
+            Assert.AreEqual(Helpers.ReadBitsMSB(booleanBytes, 6, 1) != 0, booleanInline.BigEndianFlag);
+            booleanInline.Flag = nextFlag;
+            booleanInline.BigEndianFlag = nextBigEndianFlag;
+            Assert.AreEqual(expectedBoolean[0], booleanInline[0]);
+#endif
+        }
+    }
+
+    [TestMethod]
     public void ReadOnlyMemberTest()
     {
         string source = @"
@@ -841,13 +943,19 @@ public class GeneratorTests
 
             public  System.Boolean Generated10 
             {
-                readonly get => BitPrimitives.ReadBitLSB(BackingField01, 0);
-                set => BitPrimitives.WriteBitLSB(BackingField01, 0, value);
+                readonly get => (BackingField01[0] & 0x01) != 0;
+                set
+                {
+                    if (value)
+                        BackingField01[0] |= 0x01;
+                    else
+                        BackingField01[0] &= 0xFE;
+                }
             }
 
             public  System.Boolean Generated20 
             {
-                get => BitPrimitives.ReadBitLSB(BackingField02, 0);
+                get => (BackingField02[0] & 0x01) != 0;
             }
 
             public unsafe  System.Boolean Generated30 
