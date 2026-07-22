@@ -328,6 +328,22 @@ public partial struct SpecializedMemoryAccessorStruct
     public Memory<byte> BigEndianBacking48;
 }
 
+[BitObject(BitOrder.LeastSignificant)]
+public partial struct OffsetArrayAccessorStruct
+{
+    [BitField(8)]
+    [BitField("AlignedValue", 32, BitFieldType.UInt32)]
+    public byte[] AlignedBacking;
+
+    [BitField(13)]
+    [BitField("Value11", 11, BitFieldType.UInt32)]
+    public byte[] Backing11;
+
+    [BitField(15)]
+    [BitField("BigEndianValue48", 48, BitFieldType.UInt64, ReverseBitOrder = true)]
+    public byte[] BigEndianBacking48;
+}
+
 [BitObject(BitOrder.LeastSignificant, AccessMode = BitObjectAccessMode.Unsafe)]
 public partial struct UnsafeMemoryAccessorStruct
 {

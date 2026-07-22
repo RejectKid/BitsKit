@@ -576,6 +576,51 @@ public class GeneratorTests
     }
 
     [TestMethod]
+    public void OffsetArrayAccessorsMatchReferenceBits()
+    {
+        Random random = new(0xA22A7);
+
+        for (int i = 0; i < 1000; i++)
+        {
+            byte[] alignedBytes = new byte[5];
+            byte[] bytes11 = new byte[(i & 1) == 0 ? 3 : 5];
+            byte[] bigEndianBytes48 = new byte[(i & 1) == 0 ? 8 : 9];
+            random.NextBytes(alignedBytes);
+            random.NextBytes(bytes11);
+            random.NextBytes(bigEndianBytes48);
+
+            var actual = new OffsetArrayAccessorStruct
+            {
+                AlignedBacking = alignedBytes,
+                Backing11 = bytes11,
+                BigEndianBacking48 = bigEndianBytes48
+            };
+
+            Assert.AreEqual(BitPrimitives.ReadUInt32LSB(alignedBytes, 8, 32), actual.AlignedValue);
+            Assert.AreEqual((uint)Helpers.ReadBitsLSB(bytes11, 13, 11), actual.Value11);
+            Assert.AreEqual(Helpers.ReadBitsMSB(bigEndianBytes48, 15, 48), actual.BigEndianValue48);
+
+            uint nextAligned = unchecked((uint)random.NextInt64());
+            uint next11 = (uint)random.Next(1 << 11);
+            ulong next48 = unchecked((ulong)random.NextInt64()) & 0xFFFFFFFFFFFFUL;
+            byte[] expectedAligned = (byte[])alignedBytes.Clone();
+            byte[] expected11 = (byte[])bytes11.Clone();
+            byte[] expected48 = (byte[])bigEndianBytes48.Clone();
+            BitPrimitives.WriteUInt32LSB(expectedAligned, 8, nextAligned, 32);
+            Helpers.WriteBitsLSB(expected11, 13, next11, 11);
+            Helpers.WriteBitsMSB(expected48, 15, next48, 48);
+
+            actual.AlignedValue = nextAligned;
+            actual.Value11 = next11;
+            actual.BigEndianValue48 = next48;
+
+            CollectionAssert.AreEqual(expectedAligned, alignedBytes);
+            CollectionAssert.AreEqual(expected11, bytes11);
+            CollectionAssert.AreEqual(expected48, bigEndianBytes48);
+        }
+    }
+
+    [TestMethod]
     public void ReadOnlyMemberTest()
     {
         string source = @"
