@@ -21,6 +21,8 @@ param(
 
     [switch] $NoRestore,
 
+    [switch] $NoBuild,
+
     [switch] $List
 )
 
@@ -37,6 +39,10 @@ $arguments = @(
 
 if ($NoRestore) {
     $arguments += '--no-restore'
+}
+
+if ($NoBuild) {
+    $arguments += '--no-build'
 }
 
 $arguments += @(
