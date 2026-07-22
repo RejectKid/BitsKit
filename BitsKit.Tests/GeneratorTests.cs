@@ -386,6 +386,94 @@ public class GeneratorTests
     }
 
     [TestMethod]
+    public void AlignedMemoryAccessorsMatchBitPrimitives()
+    {
+        Random random = new(0xA119ED);
+
+        for (int i = 0; i < 1000; i++)
+        {
+            byte[] byteBytes = new byte[1];
+            byte[] signedByteBytes = new byte[1];
+            byte[] uint16Bytes = new byte[2];
+            byte[] int32Bytes = new byte[4];
+            byte[] uint64Bytes = new byte[8];
+            byte[] uint16BigEndianBytes = new byte[2];
+            byte[] int32BigEndianBytes = new byte[4];
+            byte[] uint64BigEndianBytes = new byte[8];
+            byte[] offsetUInt32Bytes = new byte[5];
+            byte[] readOnlyUInt32Bytes = new byte[4];
+            byte[] enumBytes = new byte[4];
+
+            foreach (byte[] bytes in new[]
+            {
+                byteBytes, signedByteBytes, uint16Bytes, int32Bytes, uint64Bytes,
+                uint16BigEndianBytes, int32BigEndianBytes, uint64BigEndianBytes,
+                offsetUInt32Bytes, readOnlyUInt32Bytes, enumBytes
+            })
+            {
+                random.NextBytes(bytes);
+            }
+
+            var actual = new AlignedMemoryAccessorStruct
+            {
+                ByteBacking = byteBytes,
+                SignedByteBacking = signedByteBytes,
+                UInt16Backing = uint16Bytes,
+                Int32Backing = int32Bytes,
+                UInt64Backing = uint64Bytes,
+                UInt16BigEndianBacking = uint16BigEndianBytes,
+                Int32BigEndianBacking = int32BigEndianBytes,
+                UInt64BigEndianBacking = uint64BigEndianBytes,
+                OffsetUInt32Backing = offsetUInt32Bytes,
+                ReadOnlyUInt32Backing = readOnlyUInt32Bytes,
+                EnumBacking = enumBytes
+            };
+
+            Assert.AreEqual(BitPrimitives.ReadUInt8LSB(byteBytes, 0, 8), actual.ByteValue);
+            Assert.AreEqual(BitPrimitives.ReadInt8LSB(signedByteBytes, 0, 8), actual.SignedByteValue);
+            Assert.AreEqual(BitPrimitives.ReadUInt16LSB(uint16Bytes, 0, 16), actual.UInt16Value);
+            Assert.AreEqual(BitPrimitives.ReadInt32LSB(int32Bytes, 0, 32), actual.Int32Value);
+            Assert.AreEqual(BitPrimitives.ReadUInt64LSB(uint64Bytes, 0, 64), actual.UInt64Value);
+            Assert.AreEqual(BitPrimitives.ReadUInt16MSB(uint16BigEndianBytes, 0, 16), actual.UInt16BigEndianValue);
+            Assert.AreEqual(BitPrimitives.ReadInt32MSB(int32BigEndianBytes, 0, 32), actual.Int32BigEndianValue);
+            Assert.AreEqual(BitPrimitives.ReadUInt64MSB(uint64BigEndianBytes, 0, 64), actual.UInt64BigEndianValue);
+            Assert.AreEqual(BitPrimitives.ReadUInt32LSB(offsetUInt32Bytes, 8, 32), actual.OffsetUInt32Value);
+            Assert.AreEqual(BitPrimitives.ReadUInt32LSB(readOnlyUInt32Bytes, 0, 32), actual.ReadOnlyUInt32Value);
+            Assert.AreEqual((TestEnum)BitPrimitives.ReadUInt32LSB(enumBytes, 0, 32), actual.EnumValue);
+
+            byte nextByte = (byte)random.Next();
+            sbyte nextSignedByte = unchecked((sbyte)random.Next());
+            ushort nextUInt16 = (ushort)random.Next();
+            int nextInt32 = random.Next();
+            ulong nextUInt64 = unchecked((ulong)random.NextInt64());
+            uint nextOffsetUInt32 = unchecked((uint)random.NextInt64());
+            TestEnum nextEnum = (TestEnum)(uint)random.Next(4);
+
+            actual.ByteValue = nextByte;
+            actual.SignedByteValue = nextSignedByte;
+            actual.UInt16Value = nextUInt16;
+            actual.Int32Value = nextInt32;
+            actual.UInt64Value = nextUInt64;
+            actual.UInt16BigEndianValue = nextUInt16;
+            actual.Int32BigEndianValue = nextInt32;
+            actual.UInt64BigEndianValue = nextUInt64;
+            actual.OffsetUInt32Value = nextOffsetUInt32;
+            actual.EnumValue = nextEnum;
+
+            Assert.AreEqual(nextByte, BitPrimitives.ReadUInt8LSB(byteBytes, 0, 8));
+            Assert.AreEqual(nextSignedByte, BitPrimitives.ReadInt8LSB(signedByteBytes, 0, 8));
+            Assert.AreEqual(nextUInt16, BitPrimitives.ReadUInt16LSB(uint16Bytes, 0, 16));
+            Assert.AreEqual(nextInt32, BitPrimitives.ReadInt32LSB(int32Bytes, 0, 32));
+            Assert.AreEqual(nextUInt64, BitPrimitives.ReadUInt64LSB(uint64Bytes, 0, 64));
+            Assert.AreEqual(nextUInt16, BitPrimitives.ReadUInt16MSB(uint16BigEndianBytes, 0, 16));
+            Assert.AreEqual(nextInt32, BitPrimitives.ReadInt32MSB(int32BigEndianBytes, 0, 32));
+            Assert.AreEqual(nextUInt64, BitPrimitives.ReadUInt64MSB(uint64BigEndianBytes, 0, 64));
+            Assert.AreEqual(nextOffsetUInt32, BitPrimitives.ReadUInt32LSB(offsetUInt32Bytes, 8, 32));
+            Assert.AreEqual(nextEnum, (TestEnum)BitPrimitives.ReadUInt32LSB(enumBytes, 0, 32));
+        }
+    }
+
+    [TestMethod]
     public void ReadOnlyMemberTest()
     {
         string source = @"

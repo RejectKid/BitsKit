@@ -256,6 +256,44 @@ public partial struct OptimizedMemoryAccessorStruct
     public Memory<byte> Backing;
 }
 
+[BitObject(BitOrder.LeastSignificant)]
+public partial struct AlignedMemoryAccessorStruct
+{
+    [BitField("ByteValue", 8, BitFieldType.Byte)]
+    public Memory<byte> ByteBacking;
+
+    [BitField("SignedByteValue", 8, BitFieldType.SByte)]
+    public Memory<byte> SignedByteBacking;
+
+    [BitField("UInt16Value", 16, BitFieldType.UInt16)]
+    public Memory<byte> UInt16Backing;
+
+    [BitField("Int32Value", 32, BitFieldType.Int32)]
+    public Memory<byte> Int32Backing;
+
+    [BitField("UInt64Value", 64, BitFieldType.UInt64)]
+    public Memory<byte> UInt64Backing;
+
+    [BitField("UInt16BigEndianValue", 16, BitFieldType.UInt16, ReverseBitOrder = true)]
+    public Memory<byte> UInt16BigEndianBacking;
+
+    [BitField("Int32BigEndianValue", 32, BitFieldType.Int32, ReverseBitOrder = true)]
+    public Memory<byte> Int32BigEndianBacking;
+
+    [BitField("UInt64BigEndianValue", 64, BitFieldType.UInt64, ReverseBitOrder = true)]
+    public Memory<byte> UInt64BigEndianBacking;
+
+    [BitField(8)]
+    [BitField("OffsetUInt32Value", 32, BitFieldType.UInt32)]
+    public Memory<byte> OffsetUInt32Backing;
+
+    [BitField("ReadOnlyUInt32Value", 32, BitFieldType.UInt32)]
+    public ReadOnlyMemory<byte> ReadOnlyUInt32Backing;
+
+    [EnumField("EnumValue", 32, typeof(TestEnum))]
+    public Memory<byte> EnumBacking;
+}
+
 #if NET8_0_OR_GREATER
 
 [BitObject(BitOrder.LeastSignificant)]

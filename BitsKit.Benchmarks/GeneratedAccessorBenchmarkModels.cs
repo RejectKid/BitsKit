@@ -62,6 +62,16 @@ public partial struct GeneratedAccessorMemoryModel
     public Memory<byte> BackingField;
 }
 
+[BitObject(BitOrder.LeastSignificant)]
+public partial struct GeneratedAccessorAlignedMemoryModel
+{
+    [BitField("UInt32Value", 32, BitFieldType.UInt32)]
+    public Memory<byte> UInt32BackingField;
+
+    [BitField("UInt64Value", 64, BitFieldType.UInt64)]
+    public Memory<byte> UInt64BackingField;
+}
+
 #if NET8_0_OR_GREATER
 
 [BitObject(BitOrder.LeastSignificant)]

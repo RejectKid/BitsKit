@@ -182,6 +182,70 @@ internal abstract record BitFieldModel
     };
 
     /// <summary>
+    /// Creates a direct endian-aware read for byte-aligned, full-width memory fields.
+    /// </summary>
+    protected bool TryGetDirectMemoryReadExpression(out string expression)
+    {
+        expression = string.Empty;
+
+        if (!TryGetDirectMemoryInfo(out int width, out string typeName, out string source))
+            return false;
+
+        if (width == 8)
+        {
+            expression = $"unchecked(({typeName}){source}[0])";
+            return true;
+        }
+
+        string endianness = BitOrder == BitOrder.MostSignificant ? "BigEndian" : "LittleEndian";
+        expression = $"BinaryPrimitives.Read{typeName}{endianness}({source})";
+        return true;
+    }
+
+    /// <summary>
+    /// Creates a direct endian-aware write for byte-aligned, full-width memory fields.
+    /// </summary>
+    protected bool TryGetDirectMemoryWriteExpression(string valueExpression, out string expression)
+    {
+        expression = string.Empty;
+
+        if (!TryGetDirectMemoryInfo(out int width, out string typeName, out string source))
+            return false;
+
+        string value = $"unchecked(({typeName})({valueExpression}))";
+        if (width == 8)
+        {
+            expression = $"{source}[0] = unchecked((Byte){value})";
+            return true;
+        }
+
+        string endianness = BitOrder == BitOrder.MostSignificant ? "BigEndian" : "LittleEndian";
+        expression = $"BinaryPrimitives.Write{typeName}{endianness}({source}, {value})";
+        return true;
+    }
+
+    private bool TryGetDirectMemoryInfo(out int width, out string typeName, out string source)
+    {
+        width = FieldType switch
+        {
+            BitFieldType.SByte or BitFieldType.Byte => 8,
+            BitFieldType.Int16 or BitFieldType.UInt16 => 16,
+            BitFieldType.Int32 or BitFieldType.UInt32 => 32,
+            BitFieldType.Int64 or BitFieldType.UInt64 => 64,
+            _ => 0
+        };
+        typeName = FieldType?.ToString() ?? string.Empty;
+
+        int byteOffset = BitOffset >> 3;
+        source = byteOffset == 0 ? "{4}.Span" : $"{{4}}.Span.Slice({byteOffset})";
+
+        return BackingFieldType == BackingFieldType.Memory &&
+               width != 0 &&
+               BitCount == width &&
+               (BitOffset & 7) == 0;
+    }
+
+    /// <summary>
     /// Creates a specialized scalar read for fixed-width integral backing fields.
     /// </summary>
     protected bool TryGetDirectIntegralReadExpression(out string expression)

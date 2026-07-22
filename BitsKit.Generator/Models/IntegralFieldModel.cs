@@ -42,7 +42,8 @@ internal sealed record IntegralFieldModel : BitFieldModel
 
     protected override string GetGetterTemplate()
     {
-        if (TryGetDirectIntegralReadExpression(out string expression))
+        if (TryGetDirectMemoryReadExpression(out string expression) ||
+            TryGetDirectIntegralReadExpression(out expression))
         {
             if (IsTypeCast)
                 expression = $"({ReturnType})({expression})";
@@ -58,7 +59,8 @@ internal sealed record IntegralFieldModel : BitFieldModel
 
     protected override string GetSetterTemplate()
     {
-        if (TryGetDirectIntegralWriteExpression("value", out string expression))
+        if (TryGetDirectMemoryWriteExpression("value", out string expression) ||
+            TryGetDirectIntegralWriteExpression("value", out expression))
             return "{0} {1} => " + expression + ";";
 
         if (IsTypeCast)
