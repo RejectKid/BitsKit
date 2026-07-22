@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
-using Microsoft.CodeAnalysis;
+using System.Linq;
 using System.Text;
 using BitsKit.Generator.Models;
-using System.Linq;
+using Microsoft.CodeAnalysis;
 
 namespace BitsKit.Generator;
 
@@ -13,6 +13,7 @@ internal sealed record TypeSymbolProcessor
 
     public BitOrder DefaultBitOrder { get; }
     public BitObjectAccessMode AccessMode { get; }
+    public bool GenerateBatchAccessors { get; }
     public bool IsStruct { get; }
     public bool IsInlineArray { get; }
 
@@ -36,6 +37,7 @@ internal sealed record TypeSymbolProcessor
 
         DefaultBitOrder = (BitOrder)attribute.ConstructorArguments[0].Value!;
         AccessMode = GetAccessMode(attribute);
+        GenerateBatchAccessors = GetGenerateBatchAccessors(attribute);
         IsStruct = typeSymbol.TypeKind == TypeKind.Struct;
         IsInlineArray = HasInlineArrayAttribute(typeSymbol);
 
@@ -53,6 +55,17 @@ internal sealed record TypeSymbolProcessor
         return BitObjectAccessMode.Checked;
     }
 
+    private static bool GetGenerateBatchAccessors(AttributeData attribute)
+    {
+        foreach (KeyValuePair<string, TypedConstant> argument in attribute.NamedArguments)
+        {
+            if (argument.Key == "GenerateBatchAccessors" && argument.Value.Value is bool value)
+                return value;
+        }
+
+        return false;
+    }
+
     public void GenerateCSharpSource(StringBuilder sb)
     {
         sb.AppendIndentedLine(1,
@@ -63,6 +76,12 @@ internal sealed record TypeSymbolProcessor
 
         foreach (BitFieldModel field in Fields)
             field.GenerateCSharpSource(sb);
+
+        if (GenerateBatchAccessors)
+        {
+            foreach (BitFieldModel field in Fields)
+                field.GenerateBatchAccessors(sb);
+        }
 
         sb.RemoveLastLine()
           .AppendIndentedLine(1, "}")

@@ -183,6 +183,20 @@ public enum TestEnum
     C = 4,
 }
 
+[BitObject(BitOrder.LeastSignificant, GenerateBatchAccessors = true)]
+public partial struct BatchAccessorStruct
+{
+    [BitField(3)]
+    [BitField("Value", 12, BitFieldType.UInt16)]
+    [BooleanField("Flag")]
+    [EnumField("Kind", 2, typeof(TestEnum))]
+    public Memory<byte> Backing;
+
+    [BitField(5)]
+    [BitField("BigEndianValue", 11, BitFieldType.UInt32, ReverseBitOrder = true)]
+    public ReadOnlyMemory<byte> ReadOnlyBacking;
+}
+
 [BitObject(BitOrder.LeastSignificant)]
 public partial struct OptimizedIntegralAccessorStruct
 {

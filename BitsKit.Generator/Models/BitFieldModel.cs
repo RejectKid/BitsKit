@@ -48,16 +48,7 @@ internal abstract record BitFieldModel
 
     public void GenerateCSharpSource(StringBuilder sb)
     {
-        string accessor = (Modifiers & BitFieldModifiers.AccessorMask) switch
-        {
-            BitFieldModifiers.Public => "public",
-            BitFieldModifiers.Private => "private",
-            BitFieldModifiers.Protected => "protected",
-            BitFieldModifiers.Internal => "internal",
-            BitFieldModifiers.ProtectedInternal => "protected internal",
-            BitFieldModifiers.PrivateProtected => "private protected",
-            _ => "public",
-        };
+        string accessor = GetAccessor();
 
         // property
         sb.AppendIndentedLine(2,
@@ -102,6 +93,56 @@ internal abstract record BitFieldModel
         sb.AppendIndentedLine(2, "}")
           .AppendLine();
     }
+
+    public void GenerateBatchAccessors(StringBuilder sb)
+    {
+        string accessor = GetAccessor();
+        string valueType = ReturnType ?? FieldType!.Value.ToString();
+        string primitiveName = this is BooleanFieldModel ? "Bit" : FieldType!.Value.ToIntegralName();
+        string bitCountArgument = this is BooleanFieldModel ? string.Empty : $", {BitCount}";
+        string readDestination = this is EnumFieldModel
+            ? $"MemoryMarshal.Cast<{valueType}, {FieldType!.Value}>(destination)"
+            : "destination";
+        string writeValues = this is EnumFieldModel
+            ? $"MemoryMarshal.Cast<{valueType}, {FieldType!.Value}>(values)"
+            : "values";
+
+        sb.AppendIndentedLine(2,
+            $"{accessor} static void Read{Name}Batch(ReadOnlySpan<Byte> source, Span<{valueType}> destination) =>")
+          .AppendIndentedLine(3,
+            $"BitBatchPrimitives.Read{primitiveName}{BitOrder.ToShortName()}(source, {BitOffset}{bitCountArgument}, {readDestination});")
+          .AppendLine()
+          .AppendIndentedLine(2,
+            $"{accessor} static void Read{Name}Batch(ReadOnlySpan<Byte> source, Int32 bitStride, Span<{valueType}> destination) =>")
+          .AppendIndentedLine(3,
+            $"BitBatchPrimitives.Read{primitiveName}{BitOrder.ToShortName()}(source, {BitOffset}{bitCountArgument}, bitStride, {readDestination});")
+          .AppendLine();
+
+        if (IsReadOnly())
+            return;
+
+        sb.AppendIndentedLine(2,
+            $"{accessor} static void Write{Name}Batch(Span<Byte> destination, ReadOnlySpan<{valueType}> values) =>")
+          .AppendIndentedLine(3,
+            $"BitBatchPrimitives.Write{primitiveName}{BitOrder.ToShortName()}(destination, {BitOffset}{bitCountArgument}, {writeValues});")
+          .AppendLine()
+          .AppendIndentedLine(2,
+            $"{accessor} static void Write{Name}Batch(Span<Byte> destination, Int32 bitStride, ReadOnlySpan<{valueType}> values) =>")
+          .AppendIndentedLine(3,
+            $"BitBatchPrimitives.Write{primitiveName}{BitOrder.ToShortName()}(destination, {BitOffset}{bitCountArgument}, bitStride, {writeValues});")
+          .AppendLine();
+    }
+
+    private string GetAccessor() => (Modifiers & BitFieldModifiers.AccessorMask) switch
+    {
+        BitFieldModifiers.Public => "public",
+        BitFieldModifiers.Private => "private",
+        BitFieldModifiers.Protected => "protected",
+        BitFieldModifiers.Internal => "internal",
+        BitFieldModifiers.ProtectedInternal => "protected internal",
+        BitFieldModifiers.PrivateProtected => "private protected",
+        _ => "public",
+    };
 
     /// <summary>
     /// Generates a template for the property accessors, type and name

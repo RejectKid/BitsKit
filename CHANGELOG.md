@@ -8,6 +8,8 @@ Notable changes to the community-maintained fork are documented here. This proje
 
 - An explicit `BitObjectAccessMode.Unsafe` generator opt-in can remove byte-storage bounds checks for callers that guarantee padded, valid backing buffers; checked generation remains the default.
 - `UnsafeBitPrimitives` exposes the raw-reference operations used by unsafe generated accessors.
+- `BitBatchPrimitives` provides allocation-free contiguous and record-strided reads and writes for every supported integral type, Boolean values, and both bit orders.
+- `BitObjectAttribute.GenerateBatchAccessors` generates strongly typed packed and strided helpers for integral, Boolean, and enum fields.
 
 ## 1.5.0 - 2026-07-21
 
