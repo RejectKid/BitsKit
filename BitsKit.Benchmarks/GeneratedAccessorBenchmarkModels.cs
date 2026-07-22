@@ -54,6 +54,14 @@ public enum GeneratedAccessorKind : uint
     Seven
 }
 
+[BitObject(BitOrder.LeastSignificant, GenerateBatchAccessors = true)]
+public partial struct GeneratedBatchAccessorModel
+{
+    [BitField(3)]
+    [BitField("Value", 12, BitFieldType.UInt32)]
+    public Memory<byte> BackingField;
+}
+
 [BitObject(BitOrder.LeastSignificant)]
 public partial struct GeneratedAccessorMemoryModel
 {

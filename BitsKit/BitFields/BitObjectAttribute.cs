@@ -19,4 +19,13 @@ public sealed class BitObjectAttribute(BitOrder defaultBitOrder) : Attribute
     /// to provide non-empty backing storage large enough for each generated access width.
     /// </remarks>
     public BitObjectAccessMode AccessMode { get; set; } = BitObjectAccessMode.Checked;
+
+    /// <summary>
+    /// Generates static checked batch helpers for every named bit field.
+    /// </summary>
+    /// <remarks>
+    /// Each field receives packed and record-strided read helpers and, when writable, matching
+    /// write helpers. The helpers operate on external byte spans and do not alter instance accessors.
+    /// </remarks>
+    public bool GenerateBatchAccessors { get; set; }
 }

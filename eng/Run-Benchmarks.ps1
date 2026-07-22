@@ -7,6 +7,7 @@ param(
 
     [string[]] $Category = @(
         'BitsKit',
+        'BatchPrimitives',
         'GeneratedAccessor',
         'BitReader',
         'MemoryBitReader',
