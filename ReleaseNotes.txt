@@ -1,3 +1,11 @@
+v1.5.0
+- Add sequential BitStreamWriter support for non-seekable compression, encryption, and network streams.
+- Generate direct mask-and-shift scalar accessors for integral, enum, and Boolean fields.
+- Specialize aligned Memory, Span, array, and byte InlineArray accessors plus common 11-, 12-, 24-, and 48-bit fields.
+- Accelerate buffered stream operations while preserving seeking, EOF, and in-place behavior.
+- Add normalized generated-accessor benchmarks and an original-version performance regression workflow.
+- Fix signed integral-backed Boolean getters.
+
 v1.4.0
 - Make stream reads reliable across partial reads and fail cleanly at EOF.
 - Add pooled sequential buffering for BitStreamReader and BitStreamWriter.

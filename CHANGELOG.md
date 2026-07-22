@@ -4,6 +4,8 @@ Notable changes to the community-maintained fork are documented here. This proje
 
 ## Unreleased
 
+## 1.5.0 - 2026-07-21
+
 ### Added
 
 - `BitStreamWriter` supports sequential output to non-seekable streams such as compression, encryption, and network streams.
@@ -13,12 +15,13 @@ Notable changes to the community-maintained fork are documented here. This proje
 
 - Integral-backed LSB and MSB generated getters now emit specialized mask-and-shift expressions instead of calling the general-purpose bit primitives.
 - The source generator emits direct mask-and-shift setters for valid fixed-width LSB and MSB scalar fields, while retaining `BitPrimitives` for memory-backed, native-integer, and invalid-range cases.
+- Byte-aligned `Memory<byte>`, span, array, and byte inline-array fields now use specialized endian-aware generated accessors.
+- Generated span and byte inline-array Boolean fields use direct mask operations, and eligible 11-, 12-, 24-, and 48-bit fields use guarded wide-window accessors.
 - Sequential `BitStreamReader` and `BitStreamWriter` single-bit operations use dedicated buffered fast paths while preserving existing seeking, EOF, and non-seekable-stream behavior.
 
 ### Fixed
 
 - Boolean fields backed by signed integral fields now read a set bit correctly.
-
 - Benchmark reports normalize batched measurements to a single library operation and include generated scalar accessors in the default feature suite.
 
 ## 1.4.0 - 2026-07-20
