@@ -417,6 +417,8 @@ internal abstract record BitFieldModel
         source = BackingFieldType switch
         {
             BackingFieldType.Memory => "{4}.Span",
+            BackingFieldType.Span when BackingField.TypeString == "byte[]" =>
+                writable ? "((Span<Byte>){4})" : "((ReadOnlySpan<Byte>){4})",
             BackingFieldType.Span => "{4}",
             BackingFieldType.InlineArray when BackingField.TypeString == "byte" =>
                 writable ? "((Span<Byte>)this)" : "((ReadOnlySpan<Byte>)this)",

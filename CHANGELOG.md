@@ -11,6 +11,10 @@ Notable changes to the community-maintained fork are documented here. This proje
 - `BitBatchPrimitives` provides allocation-free contiguous and record-strided reads and writes for every supported integral type, Boolean values, and both bit orders.
 - `BitObjectAttribute.GenerateBatchAccessors` generates strongly typed packed and strided helpers for integral, Boolean, and enum fields.
 
+### Fixed
+
+- Array-backed generated accessors compile when an optimized field begins at a nonzero byte offset.
+
 ## 1.5.0 - 2026-07-21
 
 ### Added
