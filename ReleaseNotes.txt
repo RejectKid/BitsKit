@@ -1,3 +1,7 @@
+v1.6.1
+- Apply the release version consistently to NuGet, assembly, file, and informational metadata.
+- Validate every shipped DLL's embedded version before publishing a package.
+
 v1.6.0
 - Add opt-in unsafe generated accessors for callers that guarantee valid padded buffers.
 - Add allocation-free contiguous and strided batch primitives plus generated batch accessors.

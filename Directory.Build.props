@@ -1,7 +1,7 @@
 <Project>
 
   <PropertyGroup>
-    <VersionPrefix>1.3.0</VersionPrefix>
+    <VersionPrefix>1.6.1</VersionPrefix>
     <Authors>barncastle;RejectKid</Authors>
     <Description>BitsKit is a library for efficient bit-level reading and writing also adding bit field support.</Description>
     <PackageTitle>BitsKit (community maintained)</PackageTitle>

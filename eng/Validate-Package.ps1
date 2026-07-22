@@ -61,6 +61,58 @@ try {
         throw "Expected package version '$ExpectedVersion', found '$($metadata.version)'."
     }
 
+    if ($ExpectedVersion -notmatch '^(\d+)\.(\d+)\.(\d+)(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$') {
+        throw "Expected version '$ExpectedVersion' is not a supported semantic version."
+    }
+
+    $expectedAssemblyVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"
+    $assemblyEntries = @(
+        'analyzers/dotnet/cs/BitsKit.Generator.dll',
+        'lib/netstandard2.1/BitsKit.dll',
+        'lib/net8.0/BitsKit.dll',
+        'lib/net10.0/BitsKit.dll'
+    )
+    $temporaryDirectory = Join-Path ([System.IO.Path]::GetTempPath()) (
+        'bitskit-package-validation-' + [System.Guid]::NewGuid().ToString('N'))
+    [void] [System.IO.Directory]::CreateDirectory($temporaryDirectory)
+
+    try {
+        foreach ($entryName in $assemblyEntries) {
+            $assemblyEntry = $archive.GetEntry($entryName)
+            $temporaryAssembly = Join-Path $temporaryDirectory ($entryName.Replace('/', '_'))
+            $sourceStream = $assemblyEntry.Open()
+            $destinationStream = [System.IO.File]::Create($temporaryAssembly)
+
+            try {
+                $sourceStream.CopyTo($destinationStream)
+            }
+            finally {
+                $destinationStream.Dispose()
+                $sourceStream.Dispose()
+            }
+
+            $assemblyVersion = [System.Reflection.AssemblyName]::GetAssemblyName(
+                $temporaryAssembly).Version.ToString()
+            $fileVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($temporaryAssembly)
+
+            if ($assemblyVersion -ne $expectedAssemblyVersion) {
+                throw "Expected '$entryName' assembly version '$expectedAssemblyVersion', found '$assemblyVersion'."
+            }
+
+            if ($fileVersion.FileVersion -ne $expectedAssemblyVersion) {
+                throw "Expected '$entryName' file version '$expectedAssemblyVersion', found '$($fileVersion.FileVersion)'."
+            }
+
+            if ($fileVersion.ProductVersion -ne $ExpectedVersion -and
+                -not $fileVersion.ProductVersion.StartsWith("$ExpectedVersion+", [System.StringComparison]::Ordinal)) {
+                throw "Expected '$entryName' product version '$ExpectedVersion', found '$($fileVersion.ProductVersion)'."
+            }
+        }
+    }
+    finally {
+        [System.IO.Directory]::Delete($temporaryDirectory, $true)
+    }
+
     if ($metadata.repository.url -ne 'https://github.com/RejectKid/BitsKit') {
         throw "Unexpected repository URL '$($metadata.repository.url)'."
     }

@@ -45,7 +45,7 @@ This fork preserves the original public API while maintaining it for current .NE
 Migrating from the original package normally requires only changing the package reference:
 
 ```xml
-<PackageReference Include="RejectKid.BitsKit" Version="1.6.0" />
+<PackageReference Include="RejectKid.BitsKit" Version="1.6.1" />
 ```
 
 No namespace changes are required. Applications that still target .NET 6 or .NET 7 can consume the `netstandard2.1` asset when their target supports it, but those runtimes are no longer built or tested directly by this project.

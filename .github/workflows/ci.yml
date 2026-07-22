@@ -92,14 +92,14 @@ jobs:
         run: dotnet restore BitsKit.sln --locked-mode
 
       - name: Build
-        run: dotnet build BitsKit.sln --configuration Release --no-restore
+        run: dotnet build BitsKit.sln --configuration Release --no-restore -p:Version=0.0.0-ci.${{ github.run_number }}
 
       - name: Validate benchmark discovery
         shell: pwsh
-        run: ./eng/Run-Benchmarks.ps1 -Filter '*' -List -NoRestore
+        run: ./eng/Run-Benchmarks.ps1 -Filter '*' -List -NoRestore -NoBuild
 
       - name: Pack
-        run: dotnet pack BitsKit/BitsKit.csproj --configuration Release --no-build --no-restore --output artifacts -p:PackageVersion=0.0.0-ci.${{ github.run_number }} -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
+        run: dotnet pack BitsKit/BitsKit.csproj --configuration Release --no-build --no-restore --output artifacts -p:Version=0.0.0-ci.${{ github.run_number }} -p:PackageVersion=0.0.0-ci.${{ github.run_number }} -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
 
       - name: Inspect package
         shell: pwsh

@@ -4,6 +4,13 @@ Notable changes to the community-maintained fork are documented here. This proje
 
 ## Unreleased
 
+## 1.6.1 - 2026-07-22
+
+### Fixed
+
+- Release builds now apply the tag-derived version to package, assembly, file, and informational metadata for every shipped DLL.
+- Package validation rejects artifacts whose embedded DLL versions do not match the expected package version.
+
 ## 1.6.0 - 2026-07-22
 
 ### Added
