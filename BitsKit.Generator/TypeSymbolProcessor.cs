@@ -12,6 +12,7 @@ internal sealed record TypeSymbolProcessor
     public string? Namespace { get; }
 
     public BitOrder DefaultBitOrder { get; }
+    public BitObjectAccessMode AccessMode { get; }
     public bool IsStruct { get; }
     public bool IsInlineArray { get; }
 
@@ -34,10 +35,22 @@ internal sealed record TypeSymbolProcessor
         if (string.IsNullOrWhiteSpace(Namespace)) Namespace = null;
 
         DefaultBitOrder = (BitOrder)attribute.ConstructorArguments[0].Value!;
+        AccessMode = GetAccessMode(attribute);
         IsStruct = typeSymbol.TypeKind == TypeKind.Struct;
         IsInlineArray = HasInlineArrayAttribute(typeSymbol);
 
         Fields = EnumerateFields(typeSymbol);
+    }
+
+    private static BitObjectAccessMode GetAccessMode(AttributeData attribute)
+    {
+        foreach (KeyValuePair<string, TypedConstant> argument in attribute.NamedArguments)
+        {
+            if (argument.Key == "AccessMode" && argument.Value.Value is int value)
+                return (BitObjectAccessMode)value;
+        }
+
+        return BitObjectAccessMode.Checked;
     }
 
     public void GenerateCSharpSource(StringBuilder sb)

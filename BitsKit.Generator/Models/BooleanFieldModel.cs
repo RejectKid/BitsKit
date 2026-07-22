@@ -30,6 +30,9 @@ internal sealed record BooleanFieldModel : BitFieldModel
 
     protected override string GetGetterTemplate()
     {
+        if (TryGetUnsafeBooleanReadExpression(out string unsafeExpression))
+            return "{0} {1} => " + unsafeExpression + ";";
+
         if (TryGetDirectStorageBooleanReadExpression(out string expression) ||
             TryGetDirectIntegralBooleanReadExpression(out expression))
             return "{0} {1} => " + expression + ";";
@@ -43,6 +46,9 @@ internal sealed record BooleanFieldModel : BitFieldModel
 
     protected override string GetSetterTemplate()
     {
+        if (TryGetUnsafeBooleanWriteTemplate(out string unsafeTemplate))
+            return unsafeTemplate;
+
         if (TryGetDirectStorageBooleanWriteTemplate(out string template))
             return template;
 

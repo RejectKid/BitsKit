@@ -55,6 +55,12 @@ internal enum BitOrder
     MostSignificant
 }
 
+internal enum BitObjectAccessMode
+{
+    Checked,
+    Unsafe
+}
+
 /// <summary>
 /// An enumeration listing all of the options to modify bit-field generation
 /// </summary>

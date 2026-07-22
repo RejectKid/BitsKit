@@ -314,6 +314,49 @@ public partial struct SpecializedMemoryAccessorStruct
     public Memory<byte> BigEndianBacking48;
 }
 
+[BitObject(BitOrder.LeastSignificant, AccessMode = BitObjectAccessMode.Unsafe)]
+public partial struct UnsafeMemoryAccessorStruct
+{
+    [BitField(3)]
+    [BitField("Value", 20, BitFieldType.UInt32)]
+    public Memory<byte> Backing;
+
+    [BitField(5)]
+    [BitField("SignedValue", 13, BitFieldType.Int32, ReverseBitOrder = true)]
+    public Memory<byte> SignedBacking;
+
+    [BitField(6)]
+    [BooleanField("Flag")]
+    public Memory<byte> BooleanBacking;
+
+    [BitField("AlignedValue", 32, BitFieldType.UInt32)]
+    public Memory<byte> AlignedBacking;
+}
+
+[BitObject(BitOrder.LeastSignificant, AccessMode = BitObjectAccessMode.Unsafe)]
+public partial struct UnsafeArrayAccessorStruct
+{
+    [BitField(3)]
+    [BitField("Value", 20, BitFieldType.UInt32)]
+    public byte[] Backing;
+}
+
+[BitObject(BitOrder.LeastSignificant, AccessMode = BitObjectAccessMode.Unsafe)]
+public ref partial struct UnsafeSpanAccessorStruct
+{
+    [BitField(3)]
+    [BitField("Value", 20, BitFieldType.UInt32)]
+    public Span<byte> Backing;
+}
+
+[BitObject(BitOrder.LeastSignificant, AccessMode = BitObjectAccessMode.Unsafe)]
+public unsafe partial struct UnsafeFixedAccessorStruct
+{
+    [BitField(3)]
+    [BitField("Value", 20, BitFieldType.UInt32)]
+    public fixed byte Backing[16];
+}
+
 [BitObject(BitOrder.LeastSignificant)]
 public ref partial struct SpecializedSpanAccessorStruct
 {
@@ -330,6 +373,15 @@ public ref partial struct SpecializedSpanAccessorStruct
 }
 
 #if NET8_0_OR_GREATER
+
+[BitObject(BitOrder.LeastSignificant, AccessMode = BitObjectAccessMode.Unsafe)]
+[InlineArray(16)]
+public partial struct UnsafeInlineArrayAccessorStruct
+{
+    [BitField(3)]
+    [BitField("Value", 20, BitFieldType.UInt32)]
+    private byte _element;
+}
 
 [BitObject(BitOrder.LeastSignificant)]
 [InlineArray(4)]

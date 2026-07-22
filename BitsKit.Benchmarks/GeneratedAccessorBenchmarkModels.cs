@@ -89,6 +89,30 @@ public partial struct GeneratedAccessorAlignedMemoryModel
 }
 
 [BitObject(BitOrder.LeastSignificant)]
+public partial struct GeneratedAccessorCheckedAccessModel
+{
+    [BitField(3)]
+    [BitField("Value20", 20, BitFieldType.UInt32)]
+    public Memory<byte> Value20BackingField;
+
+    [BitField(5)]
+    [BooleanField("Flag")]
+    public Memory<byte> BooleanBackingField;
+}
+
+[BitObject(BitOrder.LeastSignificant, AccessMode = BitObjectAccessMode.Unsafe)]
+public partial struct GeneratedAccessorUnsafeAccessModel
+{
+    [BitField(3)]
+    [BitField("Value20", 20, BitFieldType.UInt32)]
+    public Memory<byte> Value20BackingField;
+
+    [BitField(5)]
+    [BooleanField("Flag")]
+    public Memory<byte> BooleanBackingField;
+}
+
+[BitObject(BitOrder.LeastSignificant)]
 public ref partial struct GeneratedAccessorAlignedSpanModel
 {
     [BitField("UInt32Value", 32, BitFieldType.UInt32)]
