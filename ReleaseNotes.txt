@@ -1,3 +1,11 @@
+v1.6.0
+- Add opt-in unsafe generated accessors for callers that guarantee valid padded buffers.
+- Add allocation-free contiguous and strided batch primitives plus generated batch accessors.
+- Isolate source generation per bit object and resolve backing storage through Roslyn symbols.
+- Support nullable byte arrays, escaped identifiers, compatible derived attributes, and fully qualified generated references.
+- Add BITSKIT007-BITSKIT014 diagnostics for invalid generator options, layouts, names, backing fields, pointers, and modifiers.
+- Fix nonzero-offset array-backed accessors and unsafe raw-pointer generation.
+
 v1.5.0
 - Add sequential BitStreamWriter support for non-seekable compression, encryption, and network streams.
 - Generate direct mask-and-shift scalar accessors for integral, enum, and Boolean fields.
