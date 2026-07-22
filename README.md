@@ -111,7 +111,7 @@ Enum bit-fields are supported by the `[EnumFieldAttribute]` helper attribute. Th
 #### Modifiers
 The `BitFieldModifiers` enum allows alterations to the way that the source generator produces the bit-fields. By default all bit-fields are generated as a *public read/write* or *public readonly* properties relative to their backing field's accessibility. The `Modifiers` field allows control over this and provides the ability to change a bit-field's accessibility and if it is `readonly`, `init only` (.NET 6.0) and/or `required` (.NET 7.0).
 
-For valid fixed-width integral backing fields using least-significant bit order, generated setters use direct masks and shifts. Getters, memory-backed fields, native integers, reversed bit order, and invalid ranges continue through `BitPrimitives` to preserve their established semantics.
+For valid fixed-width integral backing fields, generated LSB and MSB getters and setters use direct masks, shifts, and byte-order operations. Memory-backed fields, native integers, and invalid ranges continue through `BitPrimitives` to preserve their established semantics.
 
 **Note:** Currently both the getter and setter share the same accessibility therefore you cannot have public bit-fields with private setters.
 

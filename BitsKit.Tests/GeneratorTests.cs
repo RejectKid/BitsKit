@@ -234,27 +234,39 @@ public class GeneratorTests
             var actual = new OptimizedIntegralAccessorStruct
             {
                 ByteBacking = (byte)random.Next(),
+                ReversedByteBacking = (byte)random.Next(),
+                ReversedFullByteBacking = (byte)random.Next(),
                 ShortBacking = (short)random.Next(),
+                ReversedShortBacking = (short)random.Next(),
                 IntBacking = random.Next(),
                 ReversedIntBacking = random.Next(),
                 UInt64Backing = ((ulong)(uint)random.Next() << 32) | (uint)random.Next(),
                 ReversedUInt64Backing = ((ulong)(uint)random.Next() << 32) | (uint)random.Next(),
+                ReversedFullUInt64Backing = ((ulong)(uint)random.Next() << 32) | (uint)random.Next(),
                 BooleanBacking = (uint)random.Next(),
                 SignedBooleanBacking = random.Next(),
                 ReversedSignedBooleanBacking = random.Next(),
-                EnumBacking = (uint)random.Next()
+                ReversedBooleanBacking = (uint)random.Next(),
+                EnumBacking = (uint)random.Next(),
+                ReversedEnumBacking = (uint)random.Next()
             };
 
             Assert.AreEqual(BitPrimitives.ReadUInt8LSB(actual.ByteBacking, 2, 5), actual.ByteValue);
+            Assert.AreEqual(BitPrimitives.ReadUInt8MSB(actual.ReversedByteBacking, 2, 5), actual.ReversedByteValue);
+            Assert.AreEqual(BitPrimitives.ReadUInt8MSB(actual.ReversedFullByteBacking, 0, 8), actual.ReversedFullByteValue);
             Assert.AreEqual(BitPrimitives.ReadInt16LSB(actual.ShortBacking, 3, 9), actual.ShortValue);
+            Assert.AreEqual(BitPrimitives.ReadInt16MSB(actual.ReversedShortBacking, 3, 9), actual.ReversedShortValue);
             Assert.AreEqual(BitPrimitives.ReadInt32LSB(actual.IntBacking, 5, 11), actual.IntValue);
             Assert.AreEqual(BitPrimitives.ReadInt32MSB(actual.ReversedIntBacking, 5, 11), actual.ReversedIntValue);
             Assert.AreEqual(BitPrimitives.ReadUInt64LSB(actual.UInt64Backing, 0, 64), actual.FullUInt64Value);
             Assert.AreEqual(BitPrimitives.ReadUInt64MSB(actual.ReversedUInt64Backing, 7, 43), actual.ReversedUInt64Value);
+            Assert.AreEqual(BitPrimitives.ReadUInt64MSB(actual.ReversedFullUInt64Backing, 0, 64), actual.ReversedFullUInt64Value);
             Assert.AreEqual(BitPrimitives.ReadUInt32LSB(actual.BooleanBacking, 5, 1) == 1, actual.Flag);
             Assert.AreEqual((actual.SignedBooleanBacking & (1 << 5)) != 0, actual.SignedFlag);
             Assert.AreEqual(BitPrimitives.ReadInt32MSB(actual.ReversedSignedBooleanBacking, 5, 1) != 0, actual.ReversedSignedFlag);
+            Assert.AreEqual(BitPrimitives.ReadUInt32MSB(actual.ReversedBooleanBacking, 5, 1) != 0, actual.ReversedFlag);
             Assert.AreEqual((TestEnum)BitPrimitives.ReadUInt32LSB(actual.EnumBacking, 5, 2), actual.EnumValue);
+            Assert.AreEqual((TestEnum)BitPrimitives.ReadUInt32MSB(actual.ReversedEnumBacking, 5, 2), actual.ReversedEnumValue);
 
             byte byteValue = (byte)random.Next();
             byte expectedByte = actual.ByteBacking;
@@ -262,11 +274,27 @@ public class GeneratorTests
             actual.ByteValue = byteValue;
             Assert.AreEqual(expectedByte, actual.ByteBacking);
 
+            byte expectedReversedByte = actual.ReversedByteBacking;
+            BitPrimitives.WriteUInt8MSB(ref expectedReversedByte, 2, byteValue, 5);
+            actual.ReversedByteValue = byteValue;
+            Assert.AreEqual(expectedReversedByte, actual.ReversedByteBacking);
+
+            byte fullByteValue = (byte)random.Next();
+            byte expectedReversedFullByte = actual.ReversedFullByteBacking;
+            BitPrimitives.WriteUInt8MSB(ref expectedReversedFullByte, 0, fullByteValue, 8);
+            actual.ReversedFullByteValue = fullByteValue;
+            Assert.AreEqual(expectedReversedFullByte, actual.ReversedFullByteBacking);
+
             short shortValue = (short)random.Next();
             short expectedShort = actual.ShortBacking;
             BitPrimitives.WriteInt16LSB(ref expectedShort, 3, shortValue, 9);
             actual.ShortValue = shortValue;
             Assert.AreEqual(expectedShort, actual.ShortBacking);
+
+            short expectedReversedShort = actual.ReversedShortBacking;
+            BitPrimitives.WriteInt16MSB(ref expectedReversedShort, 3, shortValue, 9);
+            actual.ReversedShortValue = shortValue;
+            Assert.AreEqual(expectedReversedShort, actual.ReversedShortBacking);
 
             int intValue = random.Next();
             int expectedInt = actual.IntBacking;
@@ -290,6 +318,12 @@ public class GeneratorTests
             actual.ReversedUInt64Value = reversedUInt64Value;
             Assert.AreEqual(expectedReversedUInt64, actual.ReversedUInt64Backing);
 
+            ulong reversedFullUInt64Value = ((ulong)(uint)random.Next() << 32) | (uint)random.Next();
+            ulong expectedReversedFullUInt64 = actual.ReversedFullUInt64Backing;
+            BitPrimitives.WriteUInt64MSB(ref expectedReversedFullUInt64, 0, reversedFullUInt64Value, 64);
+            actual.ReversedFullUInt64Value = reversedFullUInt64Value;
+            Assert.AreEqual(expectedReversedFullUInt64, actual.ReversedFullUInt64Backing);
+
             bool flag = random.Next(2) != 0;
             uint expectedBoolean = actual.BooleanBacking;
             BitPrimitives.WriteUInt32LSB(ref expectedBoolean, 5, flag ? 1u : 0u, 1);
@@ -306,11 +340,21 @@ public class GeneratorTests
             actual.ReversedSignedFlag = flag;
             Assert.AreEqual(expectedReversedSignedBoolean, actual.ReversedSignedBooleanBacking);
 
+            uint expectedReversedBoolean = actual.ReversedBooleanBacking;
+            BitPrimitives.WriteUInt32MSB(ref expectedReversedBoolean, 5, flag ? 1u : 0u, 1);
+            actual.ReversedFlag = flag;
+            Assert.AreEqual(expectedReversedBoolean, actual.ReversedBooleanBacking);
+
             TestEnum enumValue = (TestEnum)random.Next(4);
             uint expectedEnum = actual.EnumBacking;
             BitPrimitives.WriteUInt32LSB(ref expectedEnum, 5, (uint)enumValue, 2);
             actual.EnumValue = enumValue;
             Assert.AreEqual(expectedEnum, actual.EnumBacking);
+
+            uint expectedReversedEnum = actual.ReversedEnumBacking;
+            BitPrimitives.WriteUInt32MSB(ref expectedReversedEnum, 5, (uint)enumValue, 2);
+            actual.ReversedEnumValue = enumValue;
+            Assert.AreEqual(expectedReversedEnum, actual.ReversedEnumBacking);
         }
     }
 
@@ -496,7 +540,7 @@ public class GeneratorTests
             public  Int32 Generated06 
             {
                 get => unchecked((Int32)((unchecked((Int32)((BinaryPrimitives.ReverseEndianness(unchecked((UInt32)BackingField00)) << 12) >> 30)) << 30) >> 30));
-                set => BitPrimitives.WriteInt32MSB(ref BackingField00, 12, value, 2);
+                set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0xC00U) | BinaryPrimitives.ReverseEndianness((unchecked((UInt32)(value)) & 0x3U) << 18)));
             }
 
             protected  Int32 Generated07 
@@ -642,7 +686,7 @@ public class GeneratorTests
             public  Int32 Generated06 
             {
                 get => unchecked((Int32)((unchecked((Int32)((BinaryPrimitives.ReverseEndianness(unchecked((UInt32)BackingField00)) << 12) >> 30)) << 30) >> 30));
-                set => BitPrimitives.WriteInt32MSB(ref BackingField00, 12, value, 2);
+                set => BackingField00 = unchecked((Int32)((unchecked((UInt32)BackingField00) & ~0xC00U) | BinaryPrimitives.ReverseEndianness((unchecked((UInt32)(value)) & 0x3U) << 18)));
             }
 
             public required Int32 Generated07 

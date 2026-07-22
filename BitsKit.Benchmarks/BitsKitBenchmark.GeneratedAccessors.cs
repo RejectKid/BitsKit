@@ -96,6 +96,46 @@ public partial class BitsKitBenchmark
     }
 
     [Benchmark(OperationsPerInvoke = AccessorOperations)]
+    [BenchmarkCategory("GeneratedAccessor", "Integral", "Set", "MSB")]
+    public uint GeneratedAccessorSetUInt32MSB()
+    {
+        for (int i = 0; i < AccessorOperations; i++)
+            _generatedAccessorSetModels[i & AccessorModelMask].MostSignificantValue = (uint)i;
+
+        return _generatedAccessorSetModels[0].MostSignificantBackingField;
+    }
+
+    [Benchmark(OperationsPerInvoke = AccessorOperations)]
+    [BenchmarkCategory("GeneratedAccessor", "Integral", "Set", "UInt64", "MSB")]
+    public ulong GeneratedAccessorSetUInt64MSB()
+    {
+        for (int i = 0; i < AccessorOperations; i++)
+            _generatedAccessorSetModels[i & AccessorModelMask].MostSignificantWideValue = (ulong)i;
+
+        return _generatedAccessorSetModels[0].MostSignificantWideBackingField;
+    }
+
+    [Benchmark(OperationsPerInvoke = AccessorOperations)]
+    [BenchmarkCategory("GeneratedAccessor", "Boolean", "Set", "MSB")]
+    public uint GeneratedAccessorSetBooleanMSB()
+    {
+        for (int i = 0; i < AccessorOperations; i++)
+            _generatedAccessorSetModels[i & AccessorModelMask].MostSignificantFlag = (i & 1) != 0;
+
+        return _generatedAccessorSetModels[0].MostSignificantBooleanBackingField;
+    }
+
+    [Benchmark(OperationsPerInvoke = AccessorOperations)]
+    [BenchmarkCategory("GeneratedAccessor", "Enum", "Set", "MSB")]
+    public uint GeneratedAccessorSetEnumMSB()
+    {
+        for (int i = 0; i < AccessorOperations; i++)
+            _generatedAccessorSetModels[i & AccessorModelMask].MostSignificantKind = (GeneratedAccessorKind)(i & 7);
+
+        return _generatedAccessorSetModels[0].MostSignificantEnumBackingField;
+    }
+
+    [Benchmark(OperationsPerInvoke = AccessorOperations)]
     [BenchmarkCategory("GeneratedAccessor", "Memory", "Get", "LSB")]
     public uint GeneratedAccessorGetMemoryLSB()
     {
@@ -142,6 +182,9 @@ public partial class BitsKitBenchmark
             models[i].EnumBackingField = value;
             models[i].WideBackingField = ((ulong)value << 32) | ~value;
             models[i].MostSignificantBackingField = value;
+            models[i].MostSignificantWideBackingField = ((ulong)value << 32) | ~value;
+            models[i].MostSignificantBooleanBackingField = value;
+            models[i].MostSignificantEnumBackingField = value;
         }
 
         return models;

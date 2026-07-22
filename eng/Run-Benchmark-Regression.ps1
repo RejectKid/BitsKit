@@ -83,14 +83,18 @@ function Get-ComparableBenchmarkMethods {
         'GeneratedAccessorGetEnumLSB',
         'GeneratedAccessorGetUInt64LSB',
         'GeneratedAccessorGetUInt32MSB',
+        'GeneratedAccessorSetUInt32MSB',
+        'GeneratedAccessorSetUInt64MSB',
+        'GeneratedAccessorSetBooleanMSB',
+        'GeneratedAccessorSetEnumMSB',
         'GeneratedAccessorGetMemoryLSB',
         'GeneratedAccessorSetMemoryLSB',
         'GeneratedAccessorGetInlineArrayLSB') {
         $methods.Add($method)
     }
 
-    if ($methods.Count -ne 66) {
-        throw "Expected 66 comparable benchmark methods, found $($methods.Count)."
+    if ($methods.Count -ne 70) {
+        throw "Expected 70 comparable benchmark methods, found $($methods.Count)."
     }
 
     return $methods
