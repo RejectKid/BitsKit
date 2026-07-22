@@ -11,6 +11,7 @@ public partial class BitsKitBenchmark
     private readonly GeneratedAccessorLsbModel[] _generatedAccessorGetModels = CreateGeneratedAccessorModels();
     private readonly GeneratedAccessorLsbModel[] _generatedAccessorSetModels = CreateGeneratedAccessorModels();
     private readonly GeneratedAccessorMemoryModel[] _generatedAccessorMemoryModels = CreateGeneratedAccessorMemoryModels();
+    private readonly GeneratedAccessorAlignedMemoryModel[] _generatedAccessorAlignedMemoryModels = CreateGeneratedAccessorAlignedMemoryModels();
     private readonly GeneratedAccessorInlineArrayModel[] _generatedAccessorInlineArrayModels = CreateGeneratedAccessorInlineArrayModels();
 
     [Benchmark(OperationsPerInvoke = AccessorOperations)]
@@ -158,6 +159,50 @@ public partial class BitsKitBenchmark
     }
 
     [Benchmark(OperationsPerInvoke = AccessorOperations)]
+    [BenchmarkCategory("GeneratedAccessor", "Memory", "Aligned", "Get", "UInt32", "LSB")]
+    public uint GeneratedAccessorGetAlignedMemoryUInt32LSB()
+    {
+        uint sum = 0;
+
+        for (int i = 0; i < AccessorOperations; i++)
+            sum += _generatedAccessorAlignedMemoryModels[i & AccessorModelMask].UInt32Value;
+
+        return sum;
+    }
+
+    [Benchmark(OperationsPerInvoke = AccessorOperations)]
+    [BenchmarkCategory("GeneratedAccessor", "Memory", "Aligned", "Set", "UInt32", "LSB")]
+    public uint GeneratedAccessorSetAlignedMemoryUInt32LSB()
+    {
+        for (int i = 0; i < AccessorOperations; i++)
+            _generatedAccessorAlignedMemoryModels[i & AccessorModelMask].UInt32Value = (uint)i;
+
+        return BitConverter.ToUInt32(_generatedAccessorAlignedMemoryModels[0].UInt32BackingField.Span);
+    }
+
+    [Benchmark(OperationsPerInvoke = AccessorOperations)]
+    [BenchmarkCategory("GeneratedAccessor", "Memory", "Aligned", "Get", "UInt64", "LSB")]
+    public ulong GeneratedAccessorGetAlignedMemoryUInt64LSB()
+    {
+        ulong sum = 0;
+
+        for (int i = 0; i < AccessorOperations; i++)
+            sum += _generatedAccessorAlignedMemoryModels[i & AccessorModelMask].UInt64Value;
+
+        return sum;
+    }
+
+    [Benchmark(OperationsPerInvoke = AccessorOperations)]
+    [BenchmarkCategory("GeneratedAccessor", "Memory", "Aligned", "Set", "UInt64", "LSB")]
+    public ulong GeneratedAccessorSetAlignedMemoryUInt64LSB()
+    {
+        for (int i = 0; i < AccessorOperations; i++)
+            _generatedAccessorAlignedMemoryModels[i & AccessorModelMask].UInt64Value = (ulong)i;
+
+        return BitConverter.ToUInt64(_generatedAccessorAlignedMemoryModels[0].UInt64BackingField.Span);
+    }
+
+    [Benchmark(OperationsPerInvoke = AccessorOperations)]
     [BenchmarkCategory("GeneratedAccessor", "InlineArray", "Get", "LSB")]
     public uint GeneratedAccessorGetInlineArrayLSB()
     {
@@ -214,6 +259,20 @@ public partial class BitsKitBenchmark
             models[i][1] = (byte)(value >> 8);
             models[i][2] = (byte)(value >> 16);
             models[i][3] = (byte)(value >> 24);
+        }
+
+        return models;
+    }
+
+    private static GeneratedAccessorAlignedMemoryModel[] CreateGeneratedAccessorAlignedMemoryModels()
+    {
+        var models = new GeneratedAccessorAlignedMemoryModel[AccessorModelCount];
+
+        for (int i = 0; i < models.Length; i++)
+        {
+            ulong value = unchecked((ulong)i * 0x9E3779B97F4A7C15UL);
+            models[i].UInt32BackingField = BitConverter.GetBytes((uint)value);
+            models[i].UInt64BackingField = BitConverter.GetBytes(value);
         }
 
         return models;
