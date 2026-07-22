@@ -18,6 +18,7 @@ internal abstract record BitFieldModel
     public BitFieldModifiers Modifiers { get; }
 
     private readonly bool _containingTypeIsStruct;
+    protected bool UsesUnsafeAccess { get; }
 
     public BitFieldModel(AttributeData attributeData, TypeSymbolProcessor? typeSymbol)
     {
@@ -28,6 +29,7 @@ internal abstract record BitFieldModel
 
             _containingTypeIsStruct = typeSymbol.IsStruct;
             BitOrder = typeSymbol.DefaultBitOrder;
+            UsesUnsafeAccess = typeSymbol.AccessMode == BitObjectAccessMode.Unsafe;
         }
 
         for (int i = 0; i < attributeData.NamedArguments.Length; i++)
@@ -180,6 +182,127 @@ internal abstract record BitFieldModel
         BackingFieldType.InlineArray => "MemoryMarshal.AsBytes((Span<{8}>)this)",
         _ => throw new NotSupportedException()
     };
+
+    /// <summary>
+    /// Creates an unchecked read through a raw reference for opted-in byte-addressable storage.
+    /// </summary>
+    protected bool TryGetUnsafeReadExpression(out string expression)
+    {
+        expression = string.Empty;
+        if (UsesFasterCheckedStorageSpecialization())
+            return false;
+
+        if (!TryGetUnsafeStorageReference(writable: false, out string source))
+            return false;
+
+        expression = $"UnsafeBitPrimitives.Read{FieldType!.Value.ToIntegralName()}{BitOrder.ToShortName()}" +
+                     $"({source}, {BitOffset}, {BitCount})";
+        return true;
+    }
+
+    /// <summary>
+    /// Creates an unchecked write through a raw reference for opted-in byte-addressable storage.
+    /// </summary>
+    protected bool TryGetUnsafeWriteExpression(string valueExpression, out string expression)
+    {
+        expression = string.Empty;
+        if (UsesFasterCheckedStorageSpecialization())
+            return false;
+
+        if (!TryGetUnsafeStorageReference(writable: true, out string destination))
+            return false;
+
+        expression = $"UnsafeBitPrimitives.Write{FieldType!.Value.ToIntegralName()}{BitOrder.ToShortName()}" +
+                     $"({destination}, {BitOffset}, unchecked(({FieldType.Value})({valueExpression})), {BitCount})";
+        return true;
+    }
+
+    /// <summary>
+    /// Creates an unchecked single-bit read through a raw reference.
+    /// </summary>
+    protected bool TryGetUnsafeBooleanReadExpression(out string expression)
+    {
+        expression = string.Empty;
+        if (!TryGetUnsafeStorageTarget(writable: false, out string source))
+            return false;
+
+        int byteOffset = BitOffset >> 3;
+        int bitInByte = BitOffset & 7;
+        int mask = 1 << (BitOrder == BitOrder.MostSignificant ? 7 - bitInByte : bitInByte);
+        string target = byteOffset == 0
+            ? source
+            : $"System.Runtime.CompilerServices.Unsafe.Add(ref {source}, {byteOffset})";
+        expression = $"({target} & 0x{mask:X2}) != 0";
+        return true;
+    }
+
+    /// <summary>
+    /// Creates an unchecked single-bit write through a raw reference.
+    /// </summary>
+    protected bool TryGetUnsafeBooleanWriteTemplate(out string template)
+    {
+        template = string.Empty;
+        if (!TryGetUnsafeStorageTarget(writable: true, out string destination))
+            return false;
+
+        int byteOffset = BitOffset >> 3;
+        int bitInByte = BitOffset & 7;
+        int mask = 1 << (BitOrder == BitOrder.MostSignificant ? 7 - bitInByte : bitInByte);
+        string target = byteOffset == 0
+            ? destination
+            : $"System.Runtime.CompilerServices.Unsafe.Add(ref {destination}, {byteOffset})";
+        template =
+            "{0} {1}\n" +
+            "{{\n" +
+            $"    ref Byte target = ref {target};\n" +
+            "    if (value)\n" +
+            $"        target |= 0x{mask:X2};\n" +
+            "    else\n" +
+            $"        target &= 0x{255 ^ mask:X2};\n" +
+            "}}";
+        return true;
+    }
+
+    private bool TryGetUnsafeStorageReference(bool writable, out string reference)
+    {
+        reference = string.Empty;
+        if (!TryGetUnsafeStorageTarget(writable, out string target))
+            return false;
+
+        reference = $"ref {target}";
+        return true;
+    }
+
+    private bool TryGetUnsafeStorageTarget(bool writable, out string target)
+    {
+        target = string.Empty;
+        if (!UsesUnsafeAccess || BackingFieldType == BackingFieldType.Integral)
+            return false;
+
+        string source = BackingField.TypeString == "byte[]"
+            ? writable ? "((Span<Byte>){4})" : "((ReadOnlySpan<Byte>){4})"
+            : writable ? SetterSource() : GetterSource();
+        target = $"MemoryMarshal.GetReference({source})";
+        return true;
+    }
+
+    private bool UsesFasterCheckedStorageSpecialization()
+    {
+        int width = FieldType switch
+        {
+            BitFieldType.SByte or BitFieldType.Byte => 8,
+            BitFieldType.Int16 or BitFieldType.UInt16 => 16,
+            BitFieldType.Int32 or BitFieldType.UInt32 => 32,
+            BitFieldType.Int64 or BitFieldType.UInt64 => 64,
+            _ => 0
+        };
+
+        return UsesUnsafeAccess &&
+               BackingFieldType is BackingFieldType.Memory or BackingFieldType.Span or BackingFieldType.InlineArray &&
+               width != 0 &&
+               BitCount == width &&
+               (BitOffset & 7) == 0;
+    }
 
     /// <summary>
     /// Creates a direct endian-aware read for byte-aligned, full-width byte storage.

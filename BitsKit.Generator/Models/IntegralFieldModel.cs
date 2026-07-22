@@ -42,6 +42,9 @@ internal sealed record IntegralFieldModel : BitFieldModel
 
     protected override string GetGetterTemplate()
     {
+        if (TryGetUnsafeReadExpression(out string unsafeExpression))
+            return "{0} {1} => " + unsafeExpression + ";";
+
         if (TryGetDirectFixedWidthReadTemplate(out string template))
             return template;
 
@@ -62,6 +65,9 @@ internal sealed record IntegralFieldModel : BitFieldModel
 
     protected override string GetSetterTemplate()
     {
+        if (TryGetUnsafeWriteExpression("value", out string unsafeExpression))
+            return "{0} {1} => " + unsafeExpression + ";";
+
         if (TryGetDirectFixedWidthWriteTemplate("value", out string template))
             return template;
 

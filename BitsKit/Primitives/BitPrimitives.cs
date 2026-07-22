@@ -30,7 +30,7 @@ public static partial class BitPrimitives
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int GetMask(int size) => (1 << size) - 1;
 
-    private static uint ReadValue32(uint source, int bitOffset, int bitCount, BitOrder bitOrder)
+    internal static uint ReadValue32(uint source, int bitOffset, int bitCount, BitOrder bitOrder)
     {
         if (bitCount == 0)
             return 0;
@@ -41,7 +41,7 @@ public static partial class BitPrimitives
             return BinaryPrimitives.ReverseEndianness(source) << bitOffset >> (32 - bitCount);
     }
 
-    private static ulong ReadValue64(ulong source, int bitOffset, int bitCount, BitOrder bitOrder)
+    internal static ulong ReadValue64(ulong source, int bitOffset, int bitCount, BitOrder bitOrder)
     {
         if (bitCount == 0)
             return 0;
@@ -52,7 +52,7 @@ public static partial class BitPrimitives
             return BinaryPrimitives.ReverseEndianness(source) << bitOffset >> (64 - bitCount);
     }
 
-    private static UInt128 ReadValue128(UInt128 source, int bitOffset, int bitCount, BitOrder bitOrder)
+    internal static UInt128 ReadValue128(UInt128 source, int bitOffset, int bitCount, BitOrder bitOrder)
     {
         if (bitCount == 0)
             return 0;
@@ -64,7 +64,7 @@ public static partial class BitPrimitives
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void WriteValue8(ref byte destination, int bitShift, int value, int bitCount)
+    internal static void WriteValue8(ref byte destination, int bitShift, int value, int bitCount)
     {
         if (bitCount == 0)
             return;
@@ -72,7 +72,7 @@ public static partial class BitPrimitives
         destination = (byte)((destination & ~(GetMask(bitCount) << bitShift)) | ((value & GetMask(bitCount)) << bitShift));
     }
 
-    private static void WriteValue16(ref ushort destination, int bitOffset, int value, int bitCount, BitOrder bitOrder)
+    internal static void WriteValue16(ref ushort destination, int bitOffset, int value, int bitCount, BitOrder bitOrder)
     {
         if (bitCount == 0)
             return;
@@ -101,7 +101,7 @@ public static partial class BitPrimitives
         }
     }
 
-    private static void WriteValue32(ref uint destination, int bitOffset, uint value, int bitCount, BitOrder bitOrder)
+    internal static void WriteValue32(ref uint destination, int bitOffset, uint value, int bitCount, BitOrder bitOrder)
     {
         if (bitCount == 0)
             return;
@@ -130,7 +130,7 @@ public static partial class BitPrimitives
         destination |= value;
     }
 
-    private static void WriteValue64(ref ulong destination, int bitOffset, ulong value, int bitCount, BitOrder bitOrder)
+    internal static void WriteValue64(ref ulong destination, int bitOffset, ulong value, int bitCount, BitOrder bitOrder)
     {
         if (bitCount == 0)
             return;
@@ -159,7 +159,7 @@ public static partial class BitPrimitives
         destination |= value;
     }
 
-    private static void WriteValue128(ref ulong destination, int bitOffset, ulong value, int bitCount, BitOrder bitOrder)
+    internal static void WriteValue128(ref ulong destination, int bitOffset, ulong value, int bitCount, BitOrder bitOrder)
     {
         // benchmarking shows that decomposing into ulong writes is faster
 

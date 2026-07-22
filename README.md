@@ -111,7 +111,27 @@ Enum bit-fields are supported by the `[EnumFieldAttribute]` helper attribute. Th
 #### Modifiers
 The `BitFieldModifiers` enum allows alterations to the way that the source generator produces the bit-fields. By default all bit-fields are generated as a *public read/write* or *public readonly* properties relative to their backing field's accessibility. The `Modifiers` field allows control over this and provides the ability to change a bit-field's accessibility and if it is `readonly`, `init only` (.NET 6.0) and/or `required` (.NET 7.0).
 
-For valid fixed-width integral backing fields, generated LSB and MSB getters and setters use direct masks, shifts, and byte-order operations. Memory-backed fields, native integers, and invalid ranges continue through `BitPrimitives` to preserve their established semantics.
+For valid fixed-width integral backing fields, generated LSB and MSB getters and setters use direct masks, shifts, and byte-order operations. Eligible memory, span, array, and byte inline-array layouts also use specialized generated accessors. Other layouts continue through `BitPrimitives` to preserve their established semantics.
+
+#### Unsafe Access Mode
+
+Generated accessors are bounds-checked by default. Applications that control every backing buffer and have measured a meaningful benefit can opt a bit-object into unchecked byte access:
+
+```c#
+[BitObject(
+    BitOrder.LeastSignificantBit,
+    AccessMode = BitObjectAccessMode.Unsafe)]
+public partial struct TrustedPacket
+{
+    [BitField(3)]
+    [BitField("Value", 20, BitFieldType.UInt32)]
+    private Memory<byte> _buffer;
+}
+```
+
+Unsafe access mode affects byte-addressable backing fields only; integral backing fields are unchanged. It permits the generator to remove length and argument validation and use raw references through `UnsafeBitPrimitives`. Already-specialized layouts retain their checked intrinsic when benchmarks show it is faster. For unchecked fields, the caller must keep backing storage alive, non-empty, and large enough from the field's starting byte for the generated load or store: 1 byte for Boolean, 4 bytes for 8/16-bit fields, 8 bytes for 32-bit fields, and 16 bytes for 64-bit fields. These access widths can exceed the bytes occupied by the logical bit-field.
+
+**Warning:** An undersized, empty, invalid, or concurrently moved backing buffer can cause out-of-bounds reads or writes, data corruption, information disclosure, or process failure. Unsafe mode is never inferred and should not be enabled merely because it benchmarks faster. Checked access remains the supported default for untrusted or variable-sized input.
 
 **Note:** Currently both the getter and setter share the same accessibility therefore you cannot have public bit-fields with private setters.
 

@@ -4,6 +4,11 @@ Notable changes to the community-maintained fork are documented here. This proje
 
 ## Unreleased
 
+### Added
+
+- An explicit `BitObjectAccessMode.Unsafe` generator opt-in can remove byte-storage bounds checks for callers that guarantee padded, valid backing buffers; checked generation remains the default.
+- `UnsafeBitPrimitives` exposes the raw-reference operations used by unsafe generated accessors.
+
 ## 1.5.0 - 2026-07-21
 
 ### Added
