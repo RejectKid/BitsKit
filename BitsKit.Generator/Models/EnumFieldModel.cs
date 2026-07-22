@@ -17,15 +17,15 @@ internal class EnumFieldAttributeModel
         switch (attributeData.ConstructorArguments.Length)
         {
             case 1: // padding constructor
-                BitCount = (byte)attributeData.ConstructorArguments[0].Value!;
+                if (attributeData.ConstructorArguments[0].Value is byte paddingSize)
+                    BitCount = paddingSize;
                 break;
             case 3: // enum constructor
-                Name = (string)attributeData.ConstructorArguments[0].Value!;
-                BitCount = (byte)attributeData.ConstructorArguments[1].Value!;
+                Name = attributeData.ConstructorArguments[0].Value as string;
+                if (attributeData.ConstructorArguments[1].Value is byte enumSize)
+                    BitCount = enumSize;
                 EnumType = attributeData.ConstructorArguments[2].Value as INamedTypeSymbol;
                 break;
-            default:
-                throw new InvalidDataException($"unknown number of enum attribute constructor arguments: {attributeData.ConstructorArguments.Length}");
         }
     }
 }
@@ -41,7 +41,9 @@ internal sealed record EnumFieldModel : BitFieldModel
         Name = attributeModel.Name!; // todo: the nullability on this is well.. wrong. padding fields have no name
         BitCount = attributeModel.BitCount;
 
-        ReturnType = attributeModel.EnumType?.ToDisplayString();
+        ReturnType = attributeModel.EnumType is null
+            ? null
+            : SymbolFormatting.GetTypeName(attributeModel.EnumType);
         FieldType = attributeModel.EnumType?.EnumUnderlyingType?.SpecialType.ToBitFieldType();
 
         if (string.IsNullOrEmpty(Name))

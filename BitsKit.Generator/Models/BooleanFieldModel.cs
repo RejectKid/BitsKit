@@ -12,7 +12,7 @@ internal sealed record BooleanFieldModel : BitFieldModel
         switch (attributeData.ConstructorArguments.Length)
         {
             case 1: // boolean constructor
-                Name = (string)attributeData.ConstructorArguments[0].Value!;
+                Name = attributeData.ConstructorArguments[0].Value as string ?? string.Empty;
                 break;
             case 0: // padding constructor
                 break;
@@ -22,7 +22,7 @@ internal sealed record BooleanFieldModel : BitFieldModel
 
         BitCount = 1;
         FieldType = BitFieldType.Boolean;
-        ReturnType = typeof(bool).FullName;
+        ReturnType = "global::System.Boolean";
 
         if (string.IsNullOrEmpty(Name))
             FieldType = BitFieldType.Padding;

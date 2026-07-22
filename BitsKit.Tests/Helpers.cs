@@ -118,4 +118,21 @@ public static class Helpers
 
         return string.Equals(normalisedS1, normalisedS2);
     }
+
+    public static bool StrEqualGeneratedSource(string? actual, string? expected)
+    {
+        if (actual is not null)
+        {
+            actual = actual
+                .Replace("global::System.Boolean", "System.Boolean")
+                .Replace("global::System.Runtime.InteropServices.", string.Empty)
+                .Replace("global::System.Runtime.CompilerServices.", string.Empty)
+                .Replace("global::System.Buffers.Binary.", string.Empty)
+                .Replace("global::System.", string.Empty)
+                .Replace("global::BitsKit.Primitives.", string.Empty)
+                .Replace("global::", string.Empty);
+        }
+
+        return StrEqualExWhiteSpace(actual, expected);
+    }
 }

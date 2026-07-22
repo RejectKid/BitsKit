@@ -85,6 +85,43 @@ internal static class Extensions
         _ => throw new NotSupportedException()
     };
 
+    public static int GetBitWidth(this SpecialType type) => type switch
+    {
+        SpecialType.System_SByte or SpecialType.System_Byte => 8,
+        SpecialType.System_Int16 or SpecialType.System_UInt16 => 16,
+        SpecialType.System_Int32 or SpecialType.System_UInt32 => 32,
+        SpecialType.System_Int64 or SpecialType.System_UInt64 => 64,
+        SpecialType.System_IntPtr or SpecialType.System_UIntPtr => 64,
+        _ => 0
+    };
+
+    public static int GetBitWidth(this BitFieldType type) => type switch
+    {
+        BitFieldType.SByte or BitFieldType.Byte => 8,
+        BitFieldType.Int16 or BitFieldType.UInt16 => 16,
+        BitFieldType.Int32 or BitFieldType.UInt32 => 32,
+        BitFieldType.Int64 or BitFieldType.UInt64 => 64,
+        BitFieldType.IntPtr or BitFieldType.UIntPtr => 64,
+        BitFieldType.Boolean => 1,
+        _ => 0
+    };
+
+    public static string ToTypeName(this BitFieldType type) => type switch
+    {
+        BitFieldType.SByte => "global::System.SByte",
+        BitFieldType.Byte => "global::System.Byte",
+        BitFieldType.Int16 => "global::System.Int16",
+        BitFieldType.UInt16 => "global::System.UInt16",
+        BitFieldType.Int32 => "global::System.Int32",
+        BitFieldType.UInt32 => "global::System.UInt32",
+        BitFieldType.Int64 => "global::System.Int64",
+        BitFieldType.UInt64 => "global::System.UInt64",
+        BitFieldType.IntPtr => "global::System.IntPtr",
+        BitFieldType.UIntPtr => "global::System.UIntPtr",
+        BitFieldType.Boolean => "global::System.Boolean",
+        _ => throw new NotSupportedException()
+    };
+
     public static string ToIntegralName(this BitFieldType type) => type switch
     {
         BitFieldType.SByte => "Int8",
