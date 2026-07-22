@@ -387,6 +387,22 @@ public unsafe partial struct UnsafeFixedAccessorStruct
     public fixed byte Backing[16];
 }
 
+[BitObject(BitOrder.LeastSignificant, AccessMode = BitObjectAccessMode.Unsafe)]
+public unsafe partial struct UnsafePointerAccessorStruct
+{
+    [BitField(11)]
+    [BitField("Value", 20, BitFieldType.UInt32)]
+    public byte* Backing;
+}
+
+[BitObject(BitOrder.LeastSignificant)]
+public partial struct NullableArrayAccessorStruct
+{
+    [BitField(8)]
+    [BitField("Value", 16, BitFieldType.UInt16)]
+    public byte[]? Backing;
+}
+
 [BitObject(BitOrder.LeastSignificant)]
 public ref partial struct SpecializedSpanAccessorStruct
 {

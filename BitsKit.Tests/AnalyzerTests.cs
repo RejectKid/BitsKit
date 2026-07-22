@@ -72,6 +72,116 @@ public class AnalyzerTests
         Assert.IsFalse(diagnostics.Any(d => d.Id == "BITSKIT003"));
     }
 
+    [TestMethod]
+    [DataRow("[BitObject((BitOrder)123)]", "BitOrder")]
+    [DataRow("[BitObject(BitOrder.LeastSignificant, AccessMode = (BitObjectAccessMode)123)]", "AccessMode")]
+    public async Task InvalidBitObjectOptionsReportBitsKit007(string attribute, string option)
+    {
+        string source = $$"""
+            {{attribute}}
+            public partial struct InvalidOptions
+            {
+                [BitField("Value", 1)]
+                public byte Backing;
+            }
+            """;
+
+        ImmutableArray<Diagnostic> diagnostics = await GetDiagnosticsAsync(source);
+        Diagnostic diagnostic = diagnostics.Single(d => d.Id == "BITSKIT007");
+        StringAssert.Contains(diagnostic.GetMessage(), option);
+    }
+
+    [TestMethod]
+    public async Task UnsupportedBackingReportsBitsKit008()
+    {
+        const string source = """
+            [BitObject(BitOrder.LeastSignificant)]
+            public partial struct UnsupportedBacking
+            {
+                [BitField("Value", 1)]
+                public string Backing;
+            }
+            """;
+
+        ImmutableArray<Diagnostic> diagnostics = await GetDiagnosticsAsync(source);
+        Assert.AreEqual(1, diagnostics.Count(d => d.Id == "BITSKIT008"));
+    }
+
+    [TestMethod]
+    public async Task CheckedRawPointerReportsBitsKit009()
+    {
+        const string source = """
+            [BitObject(BitOrder.LeastSignificant)]
+            public unsafe partial struct CheckedPointer
+            {
+                [BitField("Value", 8, BitFieldType.Byte)]
+                public byte* Backing;
+            }
+            """;
+
+        ImmutableArray<Diagnostic> diagnostics = await GetDiagnosticsAsync(source);
+        Assert.AreEqual(1, diagnostics.Count(d => d.Id == "BITSKIT009"));
+    }
+
+    [TestMethod]
+    public async Task InvalidAndDuplicateNamesReportDiagnostics()
+    {
+        const string source = """
+            [BitObject(BitOrder.LeastSignificant)]
+            public partial struct InvalidNames
+            {
+                [BitField("not a name", 1)]
+                [BitField("Value", 1)]
+                [BitField("Value", 1)]
+                public byte Backing;
+            }
+            """;
+
+        ImmutableArray<Diagnostic> diagnostics = await GetDiagnosticsAsync(source);
+        Assert.AreEqual(1, diagnostics.Count(d => d.Id == "BITSKIT010"));
+        Assert.AreEqual(1, diagnostics.Count(d => d.Id == "BITSKIT011"));
+    }
+
+    [TestMethod]
+    public async Task InvalidWidthsAndLayoutsReportDiagnostics()
+    {
+        const string source = """
+            [BitObject(BitOrder.LeastSignificant)]
+            public partial struct InvalidLayouts
+            {
+                [BitField("TooWideForType", 9, BitFieldType.Byte)]
+                public byte[] DynamicBacking;
+
+                [BitField("UnknownType", 1, (BitFieldType)123)]
+                public byte[] UnknownTypeBacking;
+
+                [BitField(7)]
+                [BitField("TooWideForBacking", 2)]
+                public byte FixedBacking;
+            }
+            """;
+
+        ImmutableArray<Diagnostic> diagnostics = await GetDiagnosticsAsync(source);
+        Assert.AreEqual(2, diagnostics.Count(d => d.Id == "BITSKIT012"));
+        Assert.AreEqual(1, diagnostics.Count(d => d.Id == "BITSKIT013"));
+    }
+
+    [TestMethod]
+    public async Task InvalidRequiredReadonlyCombinationReportsBitsKit014()
+    {
+        const string source = """
+            [BitObject(BitOrder.LeastSignificant)]
+            public partial struct InvalidModifiers
+            {
+                [BitField("Value", 1, Modifiers = BitFieldModifiers.Required | BitFieldModifiers.ReadOnly)]
+                public byte Backing;
+            }
+            """;
+
+        ImmutableArray<Diagnostic> diagnostics = await GetDiagnosticsAsync(source);
+        Assert.AreEqual(1, diagnostics.Count(d => d.Id == "BITSKIT014"));
+    }
+
     private static async Task<ImmutableArray<Diagnostic>> GetDiagnosticsAsync(string source)
     {
         var references = AppDomain.CurrentDomain.GetAssemblies()
@@ -87,7 +197,7 @@ public class AnalyzerTests
                 allowUnsafe: true));
 
         return await compilation
-            .WithAnalyzers([new BitFieldAnalyser()])
+            .WithAnalyzers([new BitFieldAnalyser(), new BitObjectAnalyser()])
             .GetAnalyzerDiagnosticsAsync();
     }
 }

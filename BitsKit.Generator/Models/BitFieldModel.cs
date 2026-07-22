@@ -37,10 +37,12 @@ internal abstract record BitFieldModel
             switch (attributeData.NamedArguments[i].Key)
             {
                 case "ReverseBitOrder":
-                    ReverseBitOrder = (bool)attributeData.NamedArguments[i].Value.Value!;
+                    if (attributeData.NamedArguments[i].Value.Value is bool reverseBitOrder)
+                        ReverseBitOrder = reverseBitOrder;
                     break;
                 case "Modifiers":
-                    Modifiers = (BitFieldModifiers)attributeData.NamedArguments[i].Value.Value!;
+                    if (attributeData.NamedArguments[i].Value.Value is int modifiers)
+                        Modifiers = (BitFieldModifiers)modifiers;
                     break;
             }
         }
@@ -55,8 +57,8 @@ internal abstract record BitFieldModel
             GetPropertyTemplate(),
             accessor,
             Modifiers.HasFlag(BitFieldModifiers.Required) ? "required" : "",
-            ReturnType ?? FieldType?.ToString(),
-            Name)
+            ReturnType ?? FieldType?.ToTypeName(),
+            SymbolFormatting.EscapeIdentifier(Name))
           .AppendIndentedLine(2, "{");
 
         // getter
@@ -97,39 +99,40 @@ internal abstract record BitFieldModel
     public void GenerateBatchAccessors(StringBuilder sb)
     {
         string accessor = GetAccessor();
-        string valueType = ReturnType ?? FieldType!.Value.ToString();
+        string methodName = Name.StartsWith("@") ? Name.Substring(1) : Name;
+        string valueType = ReturnType ?? FieldType!.Value.ToTypeName();
         string primitiveName = this is BooleanFieldModel ? "Bit" : FieldType!.Value.ToIntegralName();
         string bitCountArgument = this is BooleanFieldModel ? string.Empty : $", {BitCount}";
         string readDestination = this is EnumFieldModel
-            ? $"MemoryMarshal.Cast<{valueType}, {FieldType!.Value}>(destination)"
+            ? $"global::System.Runtime.InteropServices.MemoryMarshal.Cast<{valueType}, {FieldType!.Value.ToTypeName()}>(destination)"
             : "destination";
         string writeValues = this is EnumFieldModel
-            ? $"MemoryMarshal.Cast<{valueType}, {FieldType!.Value}>(values)"
+            ? $"global::System.Runtime.InteropServices.MemoryMarshal.Cast<{valueType}, {FieldType!.Value.ToTypeName()}>(values)"
             : "values";
 
         sb.AppendIndentedLine(2,
-            $"{accessor} static void Read{Name}Batch(ReadOnlySpan<Byte> source, Span<{valueType}> destination) =>")
+            $"{accessor} static void Read{methodName}Batch(global::System.ReadOnlySpan<global::System.Byte> source, global::System.Span<{valueType}> destination) =>")
           .AppendIndentedLine(3,
-            $"BitBatchPrimitives.Read{primitiveName}{BitOrder.ToShortName()}(source, {BitOffset}{bitCountArgument}, {readDestination});")
+            $"global::BitsKit.Primitives.BitBatchPrimitives.Read{primitiveName}{BitOrder.ToShortName()}(source, {BitOffset}{bitCountArgument}, {readDestination});")
           .AppendLine()
           .AppendIndentedLine(2,
-            $"{accessor} static void Read{Name}Batch(ReadOnlySpan<Byte> source, Int32 bitStride, Span<{valueType}> destination) =>")
+            $"{accessor} static void Read{methodName}Batch(global::System.ReadOnlySpan<global::System.Byte> source, global::System.Int32 bitStride, global::System.Span<{valueType}> destination) =>")
           .AppendIndentedLine(3,
-            $"BitBatchPrimitives.Read{primitiveName}{BitOrder.ToShortName()}(source, {BitOffset}{bitCountArgument}, bitStride, {readDestination});")
+            $"global::BitsKit.Primitives.BitBatchPrimitives.Read{primitiveName}{BitOrder.ToShortName()}(source, {BitOffset}{bitCountArgument}, bitStride, {readDestination});")
           .AppendLine();
 
         if (IsReadOnly())
             return;
 
         sb.AppendIndentedLine(2,
-            $"{accessor} static void Write{Name}Batch(Span<Byte> destination, ReadOnlySpan<{valueType}> values) =>")
+            $"{accessor} static void Write{methodName}Batch(global::System.Span<global::System.Byte> destination, global::System.ReadOnlySpan<{valueType}> values) =>")
           .AppendIndentedLine(3,
-            $"BitBatchPrimitives.Write{primitiveName}{BitOrder.ToShortName()}(destination, {BitOffset}{bitCountArgument}, {writeValues});")
+            $"global::BitsKit.Primitives.BitBatchPrimitives.Write{primitiveName}{BitOrder.ToShortName()}(destination, {BitOffset}{bitCountArgument}, {writeValues});")
           .AppendLine()
           .AppendIndentedLine(2,
-            $"{accessor} static void Write{Name}Batch(Span<Byte> destination, Int32 bitStride, ReadOnlySpan<{valueType}> values) =>")
+            $"{accessor} static void Write{methodName}Batch(global::System.Span<global::System.Byte> destination, global::System.Int32 bitStride, global::System.ReadOnlySpan<{valueType}> values) =>")
           .AppendIndentedLine(3,
-            $"BitBatchPrimitives.Write{primitiveName}{BitOrder.ToShortName()}(destination, {BitOffset}{bitCountArgument}, bitStride, {writeValues});")
+            $"global::BitsKit.Primitives.BitBatchPrimitives.Write{primitiveName}{BitOrder.ToShortName()}(destination, {BitOffset}{bitCountArgument}, bitStride, {writeValues});")
           .AppendLine();
     }
 
@@ -206,8 +209,8 @@ internal abstract record BitFieldModel
         BackingFieldType.Integral => "{4}",
         BackingFieldType.Memory => "{4}.Span",
         BackingFieldType.Span => "{4}",
-        BackingFieldType.Pointer => "MemoryMarshal.CreateReadOnlySpan(ref {4}[0], {7})",
-        BackingFieldType.InlineArray => "MemoryMarshal.AsBytes<{8}>(this)",
+        BackingFieldType.Pointer => "global::System.Runtime.InteropServices.MemoryMarshal.CreateReadOnlySpan(ref {4}[0], {7})",
+        BackingFieldType.InlineArray => "global::System.Runtime.InteropServices.MemoryMarshal.AsBytes<{8}>(this)",
         _ => throw new NotSupportedException()
     };
 
@@ -219,8 +222,8 @@ internal abstract record BitFieldModel
         BackingFieldType.Integral => "ref {4}",
         BackingFieldType.Memory => "{4}.Span",
         BackingFieldType.Span => "{4}",
-        BackingFieldType.Pointer => "MemoryMarshal.CreateSpan(ref {4}[0], {7})",
-        BackingFieldType.InlineArray => "MemoryMarshal.AsBytes((Span<{8}>)this)",
+        BackingFieldType.Pointer => "global::System.Runtime.InteropServices.MemoryMarshal.CreateSpan(ref {4}[0], {7})",
+        BackingFieldType.InlineArray => "global::System.Runtime.InteropServices.MemoryMarshal.AsBytes((global::System.Span<{8}>)this)",
         _ => throw new NotSupportedException()
     };
 
@@ -236,7 +239,7 @@ internal abstract record BitFieldModel
         if (!TryGetUnsafeStorageReference(writable: false, out string source))
             return false;
 
-        expression = $"UnsafeBitPrimitives.Read{FieldType!.Value.ToIntegralName()}{BitOrder.ToShortName()}" +
+        expression = $"global::BitsKit.Primitives.UnsafeBitPrimitives.Read{FieldType!.Value.ToIntegralName()}{BitOrder.ToShortName()}" +
                      $"({source}, {BitOffset}, {BitCount})";
         return true;
     }
@@ -253,7 +256,7 @@ internal abstract record BitFieldModel
         if (!TryGetUnsafeStorageReference(writable: true, out string destination))
             return false;
 
-        expression = $"UnsafeBitPrimitives.Write{FieldType!.Value.ToIntegralName()}{BitOrder.ToShortName()}" +
+        expression = $"global::BitsKit.Primitives.UnsafeBitPrimitives.Write{FieldType!.Value.ToIntegralName()}{BitOrder.ToShortName()}" +
                      $"({destination}, {BitOffset}, unchecked(({FieldType.Value})({valueExpression})), {BitCount})";
         return true;
     }
@@ -272,7 +275,7 @@ internal abstract record BitFieldModel
         int mask = 1 << (BitOrder == BitOrder.MostSignificant ? 7 - bitInByte : bitInByte);
         string target = byteOffset == 0
             ? source
-            : $"System.Runtime.CompilerServices.Unsafe.Add(ref {source}, {byteOffset})";
+            : $"global::System.Runtime.CompilerServices.Unsafe.Add(ref {source}, {byteOffset})";
         expression = $"({target} & 0x{mask:X2}) != 0";
         return true;
     }
@@ -291,11 +294,11 @@ internal abstract record BitFieldModel
         int mask = 1 << (BitOrder == BitOrder.MostSignificant ? 7 - bitInByte : bitInByte);
         string target = byteOffset == 0
             ? destination
-            : $"System.Runtime.CompilerServices.Unsafe.Add(ref {destination}, {byteOffset})";
+            : $"global::System.Runtime.CompilerServices.Unsafe.Add(ref {destination}, {byteOffset})";
         template =
             "{0} {1}\n" +
             "{{\n" +
-            $"    ref Byte target = ref {target};\n" +
+            $"    ref global::System.Byte target = ref {target};\n" +
             "    if (value)\n" +
             $"        target |= 0x{mask:X2};\n" +
             "    else\n" +
@@ -320,10 +323,16 @@ internal abstract record BitFieldModel
         if (!UsesUnsafeAccess || BackingFieldType == BackingFieldType.Integral)
             return false;
 
-        string source = BackingField.TypeString == "byte[]"
-            ? writable ? "((Span<Byte>){4})" : "((ReadOnlySpan<Byte>){4})"
+        if (BackingField.IsRawPointer)
+        {
+            target = "{4}[0]";
+            return true;
+        }
+
+        string source = BackingField.IsByteArray
+            ? writable ? "((global::System.Span<global::System.Byte>){4})" : "((global::System.ReadOnlySpan<global::System.Byte>){4})"
             : writable ? SetterSource() : GetterSource();
-        target = $"MemoryMarshal.GetReference({source})";
+        target = $"global::System.Runtime.InteropServices.MemoryMarshal.GetReference({source})";
         return true;
     }
 
@@ -362,7 +371,7 @@ internal abstract record BitFieldModel
         }
 
         string endianness = BitOrder == BitOrder.MostSignificant ? "BigEndian" : "LittleEndian";
-        expression = $"BinaryPrimitives.Read{typeName}{endianness}({source})";
+        expression = $"global::System.Buffers.Binary.BinaryPrimitives.Read{typeName.Substring(typeName.LastIndexOf('.') + 1)}{endianness}({source})";
         return true;
     }
 
@@ -379,12 +388,12 @@ internal abstract record BitFieldModel
         string value = $"unchecked(({typeName})({valueExpression}))";
         if (width == 8)
         {
-            expression = $"{source}[0] = unchecked((Byte){value})";
+            expression = $"{source}[0] = unchecked((global::System.Byte){value})";
             return true;
         }
 
         string endianness = BitOrder == BitOrder.MostSignificant ? "BigEndian" : "LittleEndian";
-        expression = $"BinaryPrimitives.Write{typeName}{endianness}({source}, {value})";
+        expression = $"global::System.Buffers.Binary.BinaryPrimitives.Write{typeName.Substring(typeName.LastIndexOf('.') + 1)}{endianness}({source}, {value})";
         return true;
     }
 
@@ -398,7 +407,7 @@ internal abstract record BitFieldModel
             BitFieldType.Int64 or BitFieldType.UInt64 => 64,
             _ => 0
         };
-        typeName = FieldType?.ToString() ?? string.Empty;
+        typeName = FieldType?.ToTypeName() ?? string.Empty;
 
         if (!TryGetByteStorageSource(writable, out source))
             return false;
@@ -417,11 +426,11 @@ internal abstract record BitFieldModel
         source = BackingFieldType switch
         {
             BackingFieldType.Memory => "{4}.Span",
-            BackingFieldType.Span when BackingField.TypeString == "byte[]" =>
-                writable ? "((Span<Byte>){4})" : "((ReadOnlySpan<Byte>){4})",
+            BackingFieldType.Span when BackingField.IsByteArray =>
+                writable ? "((global::System.Span<global::System.Byte>){4})" : "((global::System.ReadOnlySpan<global::System.Byte>){4})",
             BackingFieldType.Span => "{4}",
             BackingFieldType.InlineArray when BackingField.TypeString == "byte" =>
-                writable ? "((Span<Byte>)this)" : "((ReadOnlySpan<Byte>)this)",
+                writable ? "((global::System.Span<global::System.Byte>)this)" : "((global::System.ReadOnlySpan<global::System.Byte>)this)",
             _ => string.Empty
         };
 
@@ -478,8 +487,8 @@ internal abstract record BitFieldModel
         template =
             "{0} {1}\n" +
             "{{\n" +
-            $"    Span<Byte> source = {source};\n" +
-            $"    source[{byteOffset}] = unchecked((Byte)((source[{byteOffset}] & 0x{255 ^ mask:X2}) | " +
+            $"    global::System.Span<global::System.Byte> source = {source};\n" +
+            $"    source[{byteOffset}] = unchecked((global::System.Byte)((source[{byteOffset}] & 0x{255 ^ mask:X2}) | " +
             $"(value ? 0x{mask:X2} : 0)));\n" +
             "}}";
         return true;
@@ -503,10 +512,10 @@ internal abstract record BitFieldModel
 
         int loadWidth = byteCount <= 4 ? 4 : 8;
         string fastWindow =
-            $"unchecked((UInt64)System.Runtime.CompilerServices.Unsafe.ReadUnaligned<UInt{loadWidth * 8}>(" +
-            "ref MemoryMarshal.GetReference(source)))";
+            $"unchecked((global::System.UInt64)global::System.Runtime.CompilerServices.Unsafe.ReadUnaligned<global::System.UInt{loadWidth * 8}>(" +
+            "ref global::System.Runtime.InteropServices.MemoryMarshal.GetReference(source)))";
         if (BitOrder == BitOrder.MostSignificant)
-            fastWindow = $"BinaryPrimitives.ReverseEndianness({fastWindow}) >> {64 - loadWidth * 8}";
+            fastWindow = $"global::System.Buffers.Binary.BinaryPrimitives.ReverseEndianness({fastWindow}) >> {64 - loadWidth * 8}";
 
         string returnType = ReturnType ?? typeName;
         int fastShift = BitOrder == BitOrder.MostSignificant ?
@@ -519,17 +528,17 @@ internal abstract record BitFieldModel
         template =
             "{0} {1}\n" +
             "{{\n" +
-            $"    ReadOnlySpan<Byte> source = {source};\n" +
+            $"    global::System.ReadOnlySpan<global::System.Byte> source = {source};\n" +
             $"    if (source.Length < {loadWidth})\n" +
             "        return ReadExact(source);\n" +
-            $"    UInt64 current = {fastWindow};\n" +
+            $"    global::System.UInt64 current = {fastWindow};\n" +
             $"    return {fastResult};\n" +
             "\n" +
-            "    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]\n" +
-            $"    static {returnType} ReadExact(ReadOnlySpan<Byte> source)\n" +
+            "    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]\n" +
+            $"    static {returnType} ReadExact(global::System.ReadOnlySpan<global::System.Byte> source)\n" +
             "    {{\n" +
             $"        source = source.Slice(0, {byteCount});\n" +
-            $"        UInt64 current = {exactWindow};\n" +
+            $"        global::System.UInt64 current = {exactWindow};\n" +
             $"        return {exactResult};\n" +
             "    }}\n" +
             "}}";
@@ -560,41 +569,41 @@ internal abstract record BitFieldModel
         ulong fastFieldMask = valueMask << fastShift;
         ulong exactFieldMask = valueMask << shift;
         string fastRead =
-            $"unchecked((UInt64)System.Runtime.CompilerServices.Unsafe.ReadUnaligned<UInt{loadWidth * 8}>(" +
-            "ref MemoryMarshal.GetReference(source)))";
+            $"unchecked((global::System.UInt64)global::System.Runtime.CompilerServices.Unsafe.ReadUnaligned<global::System.UInt{loadWidth * 8}>(" +
+            "ref global::System.Runtime.InteropServices.MemoryMarshal.GetReference(source)))";
         string fastWriteValue = "current";
         if (BitOrder == BitOrder.MostSignificant)
         {
-            fastRead = $"BinaryPrimitives.ReverseEndianness({fastRead}) >> {64 - loadWidth * 8}";
+            fastRead = $"global::System.Buffers.Binary.BinaryPrimitives.ReverseEndianness({fastRead}) >> {64 - loadWidth * 8}";
             fastWriteValue =
-                $"BinaryPrimitives.ReverseEndianness(current << {64 - loadWidth * 8})";
+                $"global::System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(current << {64 - loadWidth * 8})";
         }
 
-        string typeName = FieldType!.Value.ToString();
+        string typeName = FieldType!.Value.ToTypeName();
         string exactRead = GetWindowReadExpression("source", byteCount, BitOrder);
         string exactWrites = GetWindowWriteStatements("source", "current", byteCount, BitOrder);
 
         template =
             "{0} {1}\n" +
             "{{\n" +
-            $"    Span<Byte> source = {source};\n" +
+            $"    global::System.Span<global::System.Byte> source = {source};\n" +
             $"    if (source.Length < {loadWidth})\n" +
             "    {{\n" +
             $"        WriteExact(source, unchecked(({typeName})({valueExpression})));\n" +
             "        return;\n" +
             "    }}\n" +
-            $"    UInt64 current = {fastRead};\n" +
+            $"    global::System.UInt64 current = {fastRead};\n" +
             $"    current = (current & ~0x{fastFieldMask:X}UL) | " +
-            $"((unchecked((UInt64)({valueExpression})) << {fastShift}) & 0x{fastFieldMask:X}UL);\n" +
-            $"    System.Runtime.CompilerServices.Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(source), unchecked((UInt{loadWidth * 8})({fastWriteValue})));\n" +
+            $"((unchecked((global::System.UInt64)({valueExpression})) << {fastShift}) & 0x{fastFieldMask:X}UL);\n" +
+            $"    global::System.Runtime.CompilerServices.Unsafe.WriteUnaligned(ref global::System.Runtime.InteropServices.MemoryMarshal.GetReference(source), unchecked((global::System.UInt{loadWidth * 8})({fastWriteValue})));\n" +
             "\n" +
-            "    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]\n" +
-            $"    static void WriteExact(Span<Byte> source, {typeName} value)\n" +
+            "    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]\n" +
+            $"    static void WriteExact(global::System.Span<global::System.Byte> source, {typeName} value)\n" +
             "    {{\n" +
             $"        source = source.Slice(0, {byteCount});\n" +
-            $"        UInt64 current = {exactRead};\n" +
+            $"        global::System.UInt64 current = {exactRead};\n" +
             $"        current = (current & ~0x{exactFieldMask:X}UL) | " +
-            $"((unchecked((UInt64)(value)) << {shift}) & 0x{exactFieldMask:X}UL);\n" +
+            $"((unchecked((global::System.UInt64)(value)) << {shift}) & 0x{exactFieldMask:X}UL);\n" +
             $"        {exactWrites}\n" +
             "    }}\n" +
             "}}";
@@ -612,7 +621,7 @@ internal abstract record BitFieldModel
             BitFieldType.Int64)
         {
             int signShift = 64 - BitCount;
-            return $"unchecked(({returnType})(unchecked((Int64)({extracted} << {signShift})) >> {signShift}))";
+            return $"unchecked(({returnType})(unchecked((global::System.Int64)({extracted} << {signShift})) >> {signShift}))";
         }
 
         return $"unchecked(({returnType}){extracted})";
@@ -628,7 +637,7 @@ internal abstract record BitFieldModel
         source = string.Empty;
         byteCount = 0;
         shift = 0;
-        typeName = FieldType?.ToString() ?? string.Empty;
+        typeName = FieldType?.ToTypeName() ?? string.Empty;
 
         if (BitCount is not (11 or 12 or 24 or 48) ||
             FieldType is not (BitFieldType.SByte or
@@ -657,26 +666,27 @@ internal abstract record BitFieldModel
 
     private static string GetWindowReadExpression(string source, int byteCount, BitOrder bitOrder)
     {
+        const string Binary = "global::System.Buffers.Binary.BinaryPrimitives";
         if (bitOrder == BitOrder.LeastSignificant)
         {
             return byteCount switch
             {
-                2 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt16LittleEndian({source}))",
-                3 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt16LittleEndian({source}) | ((UInt64){source}[2] << 16))",
-                4 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt32LittleEndian({source}))",
-                6 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt32LittleEndian({source}) | ((UInt64)BinaryPrimitives.ReadUInt16LittleEndian({source}.Slice(4)) << 32))",
-                7 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt32LittleEndian({source}) | ((UInt64)BinaryPrimitives.ReadUInt16LittleEndian({source}.Slice(4)) << 32) | ((UInt64){source}[6] << 48))",
+                2 => $"unchecked((global::System.UInt64){Binary}.ReadUInt16LittleEndian({source}))",
+                3 => $"unchecked((global::System.UInt64){Binary}.ReadUInt16LittleEndian({source}) | ((global::System.UInt64){source}[2] << 16))",
+                4 => $"unchecked((global::System.UInt64){Binary}.ReadUInt32LittleEndian({source}))",
+                6 => $"unchecked((global::System.UInt64){Binary}.ReadUInt32LittleEndian({source}) | ((global::System.UInt64){Binary}.ReadUInt16LittleEndian({source}.Slice(4)) << 32))",
+                7 => $"unchecked((global::System.UInt64){Binary}.ReadUInt32LittleEndian({source}) | ((global::System.UInt64){Binary}.ReadUInt16LittleEndian({source}.Slice(4)) << 32) | ((global::System.UInt64){source}[6] << 48))",
                 _ => throw new NotSupportedException()
             };
         }
 
         return byteCount switch
         {
-            2 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt16BigEndian({source}))",
-            3 => $"unchecked(((UInt64)BinaryPrimitives.ReadUInt16BigEndian({source}) << 8) | {source}[2])",
-            4 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt32BigEndian({source}))",
-            6 => $"unchecked(((UInt64)BinaryPrimitives.ReadUInt32BigEndian({source}) << 16) | BinaryPrimitives.ReadUInt16BigEndian({source}.Slice(4)))",
-            7 => $"unchecked(((UInt64)BinaryPrimitives.ReadUInt32BigEndian({source}) << 24) | ((UInt64)BinaryPrimitives.ReadUInt16BigEndian({source}.Slice(4)) << 8) | {source}[6])",
+            2 => $"unchecked((global::System.UInt64){Binary}.ReadUInt16BigEndian({source}))",
+            3 => $"unchecked(((global::System.UInt64){Binary}.ReadUInt16BigEndian({source}) << 8) | {source}[2])",
+            4 => $"unchecked((global::System.UInt64){Binary}.ReadUInt32BigEndian({source}))",
+            6 => $"unchecked(((global::System.UInt64){Binary}.ReadUInt32BigEndian({source}) << 16) | {Binary}.ReadUInt16BigEndian({source}.Slice(4)))",
+            7 => $"unchecked(((global::System.UInt64){Binary}.ReadUInt32BigEndian({source}) << 24) | ((global::System.UInt64){Binary}.ReadUInt16BigEndian({source}.Slice(4)) << 8) | {source}[6])",
             _ => throw new NotSupportedException()
         };
     }
@@ -687,26 +697,27 @@ internal abstract record BitFieldModel
         int byteCount,
         BitOrder bitOrder)
     {
+        const string Binary = "global::System.Buffers.Binary.BinaryPrimitives";
         if (bitOrder == BitOrder.LeastSignificant)
         {
             return byteCount switch
             {
-                2 => $"BinaryPrimitives.WriteUInt16LittleEndian({source}, unchecked((UInt16){value}));",
-                3 => $"BinaryPrimitives.WriteUInt16LittleEndian({source}, unchecked((UInt16){value})); {source}[2] = unchecked((Byte)({value} >> 16));",
-                4 => $"BinaryPrimitives.WriteUInt32LittleEndian({source}, unchecked((UInt32){value}));",
-                6 => $"BinaryPrimitives.WriteUInt32LittleEndian({source}, unchecked((UInt32){value})); BinaryPrimitives.WriteUInt16LittleEndian({source}.Slice(4), unchecked((UInt16)({value} >> 32)));",
-                7 => $"BinaryPrimitives.WriteUInt32LittleEndian({source}, unchecked((UInt32){value})); BinaryPrimitives.WriteUInt16LittleEndian({source}.Slice(4), unchecked((UInt16)({value} >> 32))); {source}[6] = unchecked((Byte)({value} >> 48));",
+                2 => $"{Binary}.WriteUInt16LittleEndian({source}, unchecked((global::System.UInt16){value}));",
+                3 => $"{Binary}.WriteUInt16LittleEndian({source}, unchecked((global::System.UInt16){value})); {source}[2] = unchecked((global::System.Byte)({value} >> 16));",
+                4 => $"{Binary}.WriteUInt32LittleEndian({source}, unchecked((global::System.UInt32){value}));",
+                6 => $"{Binary}.WriteUInt32LittleEndian({source}, unchecked((global::System.UInt32){value})); {Binary}.WriteUInt16LittleEndian({source}.Slice(4), unchecked((global::System.UInt16)({value} >> 32)));",
+                7 => $"{Binary}.WriteUInt32LittleEndian({source}, unchecked((global::System.UInt32){value})); {Binary}.WriteUInt16LittleEndian({source}.Slice(4), unchecked((global::System.UInt16)({value} >> 32))); {source}[6] = unchecked((global::System.Byte)({value} >> 48));",
                 _ => throw new NotSupportedException()
             };
         }
 
         return byteCount switch
         {
-            2 => $"BinaryPrimitives.WriteUInt16BigEndian({source}, unchecked((UInt16){value}));",
-            3 => $"BinaryPrimitives.WriteUInt16BigEndian({source}, unchecked((UInt16)({value} >> 8))); {source}[2] = unchecked((Byte){value});",
-            4 => $"BinaryPrimitives.WriteUInt32BigEndian({source}, unchecked((UInt32){value}));",
-            6 => $"BinaryPrimitives.WriteUInt32BigEndian({source}, unchecked((UInt32)({value} >> 16))); BinaryPrimitives.WriteUInt16BigEndian({source}.Slice(4), unchecked((UInt16){value}));",
-            7 => $"BinaryPrimitives.WriteUInt32BigEndian({source}, unchecked((UInt32)({value} >> 24))); BinaryPrimitives.WriteUInt16BigEndian({source}.Slice(4), unchecked((UInt16)({value} >> 8))); {source}[6] = unchecked((Byte){value});",
+            2 => $"{Binary}.WriteUInt16BigEndian({source}, unchecked((global::System.UInt16){value}));",
+            3 => $"{Binary}.WriteUInt16BigEndian({source}, unchecked((global::System.UInt16)({value} >> 8))); {source}[2] = unchecked((global::System.Byte){value});",
+            4 => $"{Binary}.WriteUInt32BigEndian({source}, unchecked((global::System.UInt32){value}));",
+            6 => $"{Binary}.WriteUInt32BigEndian({source}, unchecked((global::System.UInt32)({value} >> 16))); {Binary}.WriteUInt16BigEndian({source}.Slice(4), unchecked((global::System.UInt16){value}));",
+            7 => $"{Binary}.WriteUInt32BigEndian({source}, unchecked((global::System.UInt32)({value} >> 24))); {Binary}.WriteUInt16BigEndian({source}.Slice(4), unchecked((global::System.UInt16)({value} >> 8))); {source}[6] = unchecked((global::System.Byte){value});",
             _ => throw new NotSupportedException()
         };
     }
@@ -726,19 +737,19 @@ internal abstract record BitFieldModel
             return false;
         }
 
-        string backingType = FieldType!.Value.ToString();
+        string backingType = FieldType!.Value.ToTypeName();
         string unsignedSource = $"unchecked(({unsignedType}){{4}})";
         if (BitOrder == BitOrder.MostSignificant)
         {
             string extracted =
-                $"(BinaryPrimitives.ReverseEndianness({unsignedSource}) << {BitOffset}) >> {workingWidth - BitCount}";
+                $"(global::System.Buffers.Binary.BinaryPrimitives.ReverseEndianness({unsignedSource}) << {BitOffset}) >> {workingWidth - BitCount}";
 
             if (FieldType is BitFieldType.SByte or
                 BitFieldType.Int16 or
                 BitFieldType.Int32 or
                 BitFieldType.Int64)
             {
-                string signedType = workingWidth == 64 ? "Int64" : "Int32";
+                string signedType = workingWidth == 64 ? "global::System.Int64" : "global::System.Int32";
                 int signShift = workingWidth - BitCount;
                 expression =
                     $"unchecked(({backingType})((unchecked(({signedType})({extracted})) << {signShift}) >> {signShift}))";
@@ -756,7 +767,7 @@ internal abstract record BitFieldModel
             BitFieldType.Int32 or
             BitFieldType.Int64)
         {
-            string signedType = workingWidth == 64 ? "Int64" : "Int32";
+            string signedType = workingWidth == 64 ? "global::System.Int64" : "global::System.Int32";
             int leftShift = workingWidth - BitOffset - BitCount;
             int rightShift = workingWidth - BitCount;
             expression =
@@ -791,7 +802,7 @@ internal abstract record BitFieldModel
         if (BitOrder == BitOrder.MostSignificant)
         {
             expression =
-                $"((BinaryPrimitives.ReverseEndianness(unchecked(({unsignedType}){{4}})) << {BitOffset}) >> {workingWidth - 1}) != 0";
+                $"((global::System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(unchecked(({unsignedType}){{4}})) << {BitOffset}) >> {workingWidth - 1}) != 0";
         }
         else
         {
@@ -819,7 +830,7 @@ internal abstract record BitFieldModel
 
         ulong valueMask = BitCount == 64 ? ulong.MaxValue : (1UL << BitCount) - 1;
         string valueMaskLiteral = FormatMask(valueMask, workingWidth);
-        string backingType = FieldType!.Value.ToString();
+        string backingType = FieldType!.Value.ToTypeName();
 
         if (BitOrder == BitOrder.MostSignificant)
         {
@@ -837,9 +848,9 @@ internal abstract record BitFieldModel
             string alignedValue = backingWidth switch
             {
                 8 => $"({value}) << {shift}",
-                16 => $"unchecked((UInt32)BinaryPrimitives.ReverseEndianness(unchecked((UInt16)(({value}) << {shift}))))",
-                32 => $"BinaryPrimitives.ReverseEndianness(({value}) << {shift})",
-                64 => $"BinaryPrimitives.ReverseEndianness(({value}) << {shift})",
+                16 => $"unchecked((global::System.UInt32)global::System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(unchecked((global::System.UInt16)(({value}) << {shift}))))",
+                32 => $"global::System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(({value}) << {shift})",
+                64 => $"global::System.Buffers.Binary.BinaryPrimitives.ReverseEndianness(({value}) << {shift})",
                 _ => throw new NotSupportedException()
             };
 
@@ -872,7 +883,7 @@ internal abstract record BitFieldModel
             _ => 0
         };
         workingWidth = backingWidth == 64 ? 64 : 32;
-        unsignedType = workingWidth == 64 ? "UInt64" : "UInt32";
+        unsignedType = workingWidth == 64 ? "global::System.UInt64" : "global::System.UInt32";
 
         return BackingFieldType == BackingFieldType.Integral &&
                backingWidth != 0 &&
@@ -889,11 +900,8 @@ internal abstract record BitFieldModel
     /// </summary>
     protected bool IsReadOnly()
     {
-        string backingType = BackingField.TypeString;
-
         return BackingField.IsReadOnly ||
-               backingType == "System.ReadOnlySpan<byte>" ||
-               backingType == "System.ReadOnlyMemory<byte>" ||
+               BackingField.IsReadOnlyStorage ||
                Modifiers.HasFlag(BitFieldModifiers.ReadOnly);
     }
 

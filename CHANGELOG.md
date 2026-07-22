@@ -10,10 +10,18 @@ Notable changes to the community-maintained fork are documented here. This proje
 - `UnsafeBitPrimitives` exposes the raw-reference operations used by unsafe generated accessors.
 - `BitBatchPrimitives` provides allocation-free contiguous and record-strided reads and writes for every supported integral type, Boolean values, and both bit orders.
 - `BitObjectAttribute.GenerateBatchAccessors` generates strongly typed packed and strided helpers for integral, Boolean, and enum fields.
+- Generator diagnostics `BITSKIT007` through `BITSKIT014` validate options, backing types, raw pointers, generated names, member conflicts, widths, fixed layouts, and modifiers.
+
+### Changed
+
+- The source generator emits one isolated file per bit object, recognizes backing storage from Roslyn symbols instead of display strings, supports nullable byte-array declarations, and fully qualifies emitted framework and library references.
+- Raw `byte*` backing fields require explicit `BitObjectAccessMode.Unsafe`; fixed buffers retain checked access.
 
 ### Fixed
 
 - Array-backed generated accessors compile when an optimized field begins at a nonzero byte offset.
+- Malformed bit objects no longer suppress generation for unrelated valid types.
+- Escaped C# identifiers, keyword namespaces, derived compatible bit-field attributes, and unsafe raw-pointer accessors generate valid source.
 
 ## 1.5.0 - 2026-07-21
 

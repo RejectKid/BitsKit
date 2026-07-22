@@ -100,11 +100,8 @@ public sealed class BitFieldAnalyser : DiagnosticAnalyzer
     }
 
     private static bool RequiresExplicitFieldType(IFieldSymbol fieldSymbol) =>
-        fieldSymbol.Type.ToDisplayString() is
-            "System.Memory<byte>" or
-            "System.ReadOnlyMemory<byte>" or
-            "System.Span<byte>" or
-            "System.ReadOnlySpan<byte>" or
-            "byte[]" or
-            "byte*";
+        BackingFieldModel.Classify(fieldSymbol) is
+            BackingFieldType.Memory or
+            BackingFieldType.Span or
+            BackingFieldType.Pointer;
 }

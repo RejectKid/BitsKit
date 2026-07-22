@@ -621,6 +621,18 @@ public class GeneratorTests
     }
 
     [TestMethod]
+    public void NullableArrayBackingGeneratesWorkingAccessors()
+    {
+        byte[] bytes = new byte[3];
+        var model = new NullableArrayAccessorStruct { Backing = bytes };
+
+        model.Value = 0xA55A;
+
+        Assert.AreEqual((ushort)0xA55A, model.Value);
+        Assert.AreEqual((ushort)0xA55A, BitPrimitives.ReadUInt16LSB(bytes, 8, 16));
+    }
+
+    [TestMethod]
     public void ReadOnlyMemberTest()
     {
         string source = @"
@@ -660,7 +672,7 @@ public class GeneratorTests
 
         string? sourceOutput = GenerateSourceAndTest(source);
 
-        Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
+        Assert.IsTrue(Helpers.StrEqualGeneratedSource(sourceOutput, expected));
     }
 
     [TestMethod]
@@ -703,7 +715,7 @@ public class GeneratorTests
 
         string? sourceOutput = GenerateSourceAndTest(source);
 
-        Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
+        Assert.IsTrue(Helpers.StrEqualGeneratedSource(sourceOutput, expected));
     }
 
     [TestMethod]
@@ -860,7 +872,7 @@ public class GeneratorTests
 
         string? sourceOutput = GenerateSourceAndTest(source);
 
-        Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
+        Assert.IsTrue(Helpers.StrEqualGeneratedSource(sourceOutput, expected));
     }
 
     [TestMethod]
@@ -952,7 +964,7 @@ public class GeneratorTests
 
         string? sourceOutput = GenerateSourceAndTest(source);
 
-        Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
+        Assert.IsTrue(Helpers.StrEqualGeneratedSource(sourceOutput, expected));
 #endif
     }
 
@@ -1013,7 +1025,7 @@ public class GeneratorTests
 
         string? sourceOutput = GenerateSourceAndTest(source);
 
-        Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
+        Assert.IsTrue(Helpers.StrEqualGeneratedSource(sourceOutput, expected));
     }
 
     [TestMethod]
@@ -1094,7 +1106,7 @@ public class GeneratorTests
 
         string? sourceOutput = GenerateSourceAndTest(source);
 
-        Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
+        Assert.IsTrue(Helpers.StrEqualGeneratedSource(sourceOutput, expected));
     }
 
     [TestMethod]
@@ -1131,7 +1143,7 @@ public class GeneratorTests
 
         string? sourceOutput = GenerateSourceAndTest(source);
 
-        Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
+        Assert.IsTrue(Helpers.StrEqualGeneratedSource(sourceOutput, expected));
     }
 
 #if NET8_0_OR_GREATER
@@ -1183,12 +1195,146 @@ public class GeneratorTests
 
         string? sourceOutput = GenerateSourceAndTest(source);
 
-        Assert.IsTrue(Helpers.StrEqualExWhiteSpace(sourceOutput, expected));
+        Assert.IsTrue(Helpers.StrEqualGeneratedSource(sourceOutput, expected));
     }
 
 #endif
 
-    private static string? GenerateSourceAndTest(string source)
+    [TestMethod]
+    public void EscapedIdentifiersAndQualifiedFrameworkNamesCompile()
+    {
+        const string source = """
+            namespace @event
+            {
+                public sealed class Byte { }
+                public static class BitPrimitives { }
+                public static class BinaryPrimitives { }
+                public static class MemoryMarshal { }
+                public ref struct Span<T> { }
+
+                [BitObject(BitOrder.LeastSignificant, GenerateBatchAccessors = true)]
+                public partial struct @class
+                {
+                    [BitField("@event", 16, BitFieldType.UInt16)]
+                    public byte[] @namespace;
+                }
+            }
+            """;
+
+        string? output = GenerateSourceAndTest(source);
+
+        StringAssert.Contains(output, "namespace @event");
+        StringAssert.Contains(output, "partial struct @class");
+        StringAssert.Contains(output, "global::System.UInt16 @event");
+        StringAssert.Contains(output, "global::System.Buffers.Binary.BinaryPrimitives");
+        StringAssert.Contains(output, "ReadeventBatch");
+        StringAssert.Contains(output, "@namespace");
+    }
+
+    [TestMethod]
+    public void InvalidBitObjectDoesNotSuppressValidGeneration()
+    {
+        const string source = """
+            [BitObject((BitOrder)123)]
+            public partial struct InvalidObject
+            {
+                [BitField("Missing", 1)]
+                public byte Backing;
+            }
+
+            [BitObject(BitOrder.LeastSignificant)]
+            public partial struct ValidObject
+            {
+                [BitField("Value", 1)]
+                public byte Backing;
+            }
+            """;
+
+        string? output = GenerateSourceAndTest(source);
+
+        StringAssert.Contains(output, "partial struct ValidObject");
+        StringAssert.Contains(output, "Value");
+        Assert.IsFalse(output.Contains("partial struct InvalidObject"));
+    }
+
+    [TestMethod]
+    public void TypesWithTheSameNameGenerateIndependentSources()
+    {
+        const string source = """
+            namespace First
+            {
+                [BitObject(BitOrder.LeastSignificant)]
+                public partial struct Packet
+                {
+                    [BitField("FirstValue", 1)]
+                    public byte Backing;
+                }
+            }
+
+            namespace Second
+            {
+                [BitObject(BitOrder.MostSignificant)]
+                public partial struct Packet
+                {
+                    [BitField("SecondValue", 1)]
+                    public byte Backing;
+                }
+            }
+            """;
+
+        string? output = GenerateSourceAndTest(source, expectedSourceCount: 2);
+
+        StringAssert.Contains(output, "namespace First");
+        StringAssert.Contains(output, "FirstValue");
+        StringAssert.Contains(output, "namespace Second");
+        StringAssert.Contains(output, "SecondValue");
+    }
+
+    [TestMethod]
+    public void InvalidFieldDoesNotSuppressOtherAccessors()
+    {
+        const string source = """
+            [BitObject(BitOrder.LeastSignificant)]
+            public partial struct PartiallyValidObject
+            {
+                [BitField("not a member name", 1)]
+                public byte InvalidBacking;
+
+                [BitField("Value", 8)]
+                public byte ValidBacking;
+            }
+            """;
+
+        string? output = GenerateSourceAndTest(source);
+
+        StringAssert.Contains(output, "Value");
+        Assert.IsFalse(output.Contains("not a member name"));
+    }
+
+    [TestMethod]
+    public void DerivedBitFieldAttributeGeneratesAccessor()
+    {
+        const string source = """
+            public sealed class CustomFieldAttribute : BitFieldAttribute
+            {
+                public CustomFieldAttribute(string name, byte size, BitFieldType type)
+                    : base(name, size, type) { }
+            }
+
+            [BitObject(BitOrder.LeastSignificant)]
+            public partial struct CustomAttributeObject
+            {
+                [CustomField("Value", 8, BitFieldType.Byte)]
+                public byte[] Backing;
+            }
+            """;
+
+        string? output = GenerateSourceAndTest(source);
+
+        StringAssert.Contains(output, "global::System.Byte Value");
+    }
+
+    private static string? GenerateSourceAndTest(string source, int expectedSourceCount = 1)
     {
         var references = AppDomain.CurrentDomain.GetAssemblies()
                                   .Where(assembly => !assembly.IsDynamic)
@@ -1222,17 +1368,19 @@ public class GeneratorTests
         }
         AssertGeneratorDidntRun(run2Result.Results[0].TrackedSteps["Main"]);
 
-        Assert.AreEqual(1, run1Result.GeneratedTrees.Length);
+        Assert.AreEqual(expectedSourceCount, run1Result.GeneratedTrees.Length);
         Assert.IsTrue(run1Result.Diagnostics.IsEmpty);
 
         GeneratorRunResult generatorResult = run1Result.Results[0];
         Assert.AreEqual(typeof(BitObjectGenerator), generatorResult.Generator.GetGeneratorType());
         Assert.IsTrue(generatorResult.Diagnostics.IsEmpty);
-        Assert.AreEqual(1, generatorResult.GeneratedSources.Length);
+        Assert.AreEqual(expectedSourceCount, generatorResult.GeneratedSources.Length);
         Assert.IsTrue(generatorResult.Exception is null);
 
-        string sourceOutput = generatorResult.GeneratedSources[0].SourceText.ToString();
-        return TruncateUsings(sourceOutput);
+        return string.Join(
+            "\n",
+            generatorResult.GeneratedSources.Select(sourceOutput =>
+                TruncateUsings(sourceOutput.SourceText.ToString())));
     }
 
     private static GeneratorDriverRunResult RunGenerator(

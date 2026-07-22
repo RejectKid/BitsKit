@@ -133,6 +133,21 @@ Due to the nature of source generators, the user must generate the backing field
 
 `byte[], fixed byte[], byte*, Span<byte>, ReadOnlySpan<byte>, Memory<byte>, ReadOnlyMemory<byte>`
 
+Fixed byte buffers have a compile-time capacity and support checked access. A raw `byte*` does not carry a length, so it is accepted only when the bit object explicitly selects unsafe access:
+
+```c#
+[BitObject(
+    BitOrder.LeastSignificant,
+    AccessMode = BitObjectAccessMode.Unsafe)]
+public unsafe partial struct NativePacket
+{
+    [BitField("Id", 12, BitFieldType.UInt16)]
+    public byte* Data;
+}
+```
+
+The caller must keep `Data` non-null and ensure that it addresses enough accessible bytes for every generated field. Use a fixed buffer, array, span, or memory when checked bounds validation is required.
+
 Bit fields are declared using the `[BitFieldAttribute]` attribute which describes their name, size, bit order and properties. Each attribute defines a new bit-field sequential from the previous. A backing field can have as many bit-fields as desired, limited only by field boundaries. 
 
 **Notes:** 
@@ -363,6 +378,16 @@ BITSKIT003 | Error | Cannot infer FieldType
 BITSKIT004 | Warning | Conflicting accessibility modifiers
 BITSKIT005 | Warning | Conflicting setter modifiers
 BITSKIT006 | Error | Enum type argument expected
+BITSKIT007 | Error | Invalid bit-object option
+BITSKIT008 | Error | Unsupported backing-field type
+BITSKIT009 | Error | Raw pointer backing requires unsafe access
+BITSKIT010 | Error | Invalid generated member name
+BITSKIT011 | Error | Generated member conflicts with an existing or generated member
+BITSKIT012 | Error | Bit-field width exceeds its value type
+BITSKIT013 | Error | Bit-field layout exceeds fixed backing storage
+BITSKIT014 | Error | Invalid modifier combination
+
+Generation is isolated per bit object. An invalid declaration reports its own diagnostic without suppressing generated accessors for unrelated valid types. Generated type, namespace, field, enum, and framework references are escaped and fully qualified so legal C# keywords and consumer-defined type names do not corrupt generated source.
 
 ### IO Classes
 There are a number of IO types available under the `BitsKit.IO` namespace built to sequentially read/write regions of bit data. Each of these classes expose all the `BitPrimitives` methods whilst supporting seeking and writing in-place.

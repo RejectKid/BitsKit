@@ -22,8 +22,7 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
             .Where(x => x is not null)
             .WithTrackingName("Main")!;
 
-        var model = typeDeclarations.Collect();
-        context.RegisterSourceOutput(model, GenerateSourceCode);
+        context.RegisterSourceOutput(typeDeclarations, GenerateSourceCode);
     }
 
     private static TypeSymbolProcessor? ProcessSyntaxNode(GeneratorAttributeSyntaxContext syntaxContext, CancellationToken token)
@@ -36,47 +35,33 @@ public sealed class BitObjectGenerator : IIncrementalGenerator
         if (symbol is not INamedTypeSymbol typeSymbol)
             return null;
 
-        AttributeData attribute = typeSymbol
+        AttributeData? attribute = typeSymbol
             .GetAttributes()
-            .Single(a => a.AttributeClass?.ToDisplayString() == StringConstants.BitObjectAttributeFullName);
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == StringConstants.BitObjectAttributeFullName);
 
-        return new(typeSymbol, attribute);
+        return attribute is null ? null : new(typeSymbol, attribute);
     }
 
-    private static void GenerateSourceCode(SourceProductionContext context, ImmutableArray<TypeSymbolProcessor> processors)
+    private static void GenerateSourceCode(SourceProductionContext context, TypeSymbolProcessor processor)
     {
-        if (processors.Length == 0)
+        if (!processor.IsValid)
             return;
 
         StringBuilder stringBuilder = new(StringConstants.Header);
+        stringBuilder.AppendLine();
 
-        // group the objects by their respective namespace
-        var namespaceGroups = processors.GroupBy(x => x.Namespace);
+        if (processor.Namespace is not null)
+            stringBuilder
+                .AppendLine($"namespace {processor.Namespace}")
+                .AppendLine("{");
 
-        foreach (var namespaceGroup in namespaceGroups)
-        {
-            stringBuilder.AppendLine();
+        processor.GenerateCSharpSource(stringBuilder);
+        stringBuilder.RemoveLastLine();
 
-            // print the current namespace
-            if (namespaceGroup.Key is not null)
-                stringBuilder
-                    .AppendLine($"namespace {namespaceGroup.Key}")
-                    .AppendLine("{");
+        if (processor.Namespace is not null)
+            stringBuilder.AppendLine("}");
 
-            foreach (TypeSymbolProcessor processor in namespaceGroup)
-            {
-                processor.GenerateCSharpSource(stringBuilder);
-            }
-
-            // remove typesymbol seperator
-            stringBuilder.RemoveLastLine();
-
-            // apply closing namespace bracket
-            if (namespaceGroup.Key is not null)
-                stringBuilder.AppendLine("}");
-        }
-
-        context.AddSource("BitsKitGeneratedFields.g.cs", stringBuilder.ToString());
+        context.AddSource(processor.HintName, stringBuilder.ToString());
     }
 
     private static bool IsValidTypeDeclaration(SyntaxNode node, CancellationToken _) =>

@@ -135,6 +135,11 @@ public class UnsafeAccessTests
         fixedModel.Value = Expected;
         Assert.AreEqual(Expected, fixedModel.Value);
 
+        byte* pointerBuffer = stackalloc byte[16];
+        var pointerModel = new UnsafePointerAccessorStruct { Backing = pointerBuffer };
+        pointerModel.Value = Expected;
+        Assert.AreEqual(Expected, pointerModel.Value);
+
         var inlineModel = new UnsafeInlineArrayAccessorStruct();
         inlineModel.Value = Expected;
         Assert.AreEqual(Expected, inlineModel.Value);

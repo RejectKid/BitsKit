@@ -18,23 +18,27 @@ internal sealed record IntegralFieldModel : BitFieldModel
         switch (attributeData.ConstructorArguments.Length)
         {
             case 1: // Padding constructor
-                BitCount = (byte)attributeData.ConstructorArguments[0].Value!;
+                if (attributeData.ConstructorArguments[0].Value is byte paddingSize)
+                    BitCount = paddingSize;
                 break;
             case 2: // Integral backed constructor
-                Name = (string)attributeData.ConstructorArguments[0].Value!;
-                BitCount = (byte)attributeData.ConstructorArguments[1].Value!;
+                Name = attributeData.ConstructorArguments[0].Value as string ?? string.Empty;
+                if (attributeData.ConstructorArguments[1].Value is byte integralSize)
+                    BitCount = integralSize;
                 break;
             case 3: // Memory backed OR Type Cast constructor
-                Name = (string)attributeData.ConstructorArguments[0].Value!;
-                BitCount = (byte)attributeData.ConstructorArguments[1].Value!;
-                FieldType = (BitFieldType)attributeData.ConstructorArguments[2].Value!;
+                Name = attributeData.ConstructorArguments[0].Value as string ?? string.Empty;
+                if (attributeData.ConstructorArguments[1].Value is byte explicitSize)
+                    BitCount = explicitSize;
+                if (attributeData.ConstructorArguments[2].Value is int fieldType)
+                    FieldType = (BitFieldType)fieldType;
                 break;
             default:
                 return;
         }
 
-        if (FieldType is not null)
-            ReturnType = FieldType.ToString();
+        if (FieldType is not null && FieldType.Value.GetBitWidth() > 0)
+            ReturnType = FieldType.Value.ToTypeName();
 
         if (string.IsNullOrEmpty(Name))
             FieldType = BitFieldType.Padding;
