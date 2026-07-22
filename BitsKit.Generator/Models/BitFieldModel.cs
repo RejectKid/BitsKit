@@ -182,13 +182,13 @@ internal abstract record BitFieldModel
     };
 
     /// <summary>
-    /// Creates a direct endian-aware read for byte-aligned, full-width memory fields.
+    /// Creates a direct endian-aware read for byte-aligned, full-width byte storage.
     /// </summary>
-    protected bool TryGetDirectMemoryReadExpression(out string expression)
+    protected bool TryGetDirectStorageReadExpression(out string expression)
     {
         expression = string.Empty;
 
-        if (!TryGetDirectMemoryInfo(out int width, out string typeName, out string source))
+        if (!TryGetDirectStorageInfo(writable: false, out int width, out string typeName, out string source))
             return false;
 
         if (width == 8)
@@ -203,13 +203,13 @@ internal abstract record BitFieldModel
     }
 
     /// <summary>
-    /// Creates a direct endian-aware write for byte-aligned, full-width memory fields.
+    /// Creates a direct endian-aware write for byte-aligned, full-width byte storage.
     /// </summary>
-    protected bool TryGetDirectMemoryWriteExpression(string valueExpression, out string expression)
+    protected bool TryGetDirectStorageWriteExpression(string valueExpression, out string expression)
     {
         expression = string.Empty;
 
-        if (!TryGetDirectMemoryInfo(out int width, out string typeName, out string source))
+        if (!TryGetDirectStorageInfo(writable: true, out int width, out string typeName, out string source))
             return false;
 
         string value = $"unchecked(({typeName})({valueExpression}))";
@@ -224,7 +224,7 @@ internal abstract record BitFieldModel
         return true;
     }
 
-    private bool TryGetDirectMemoryInfo(out int width, out string typeName, out string source)
+    private bool TryGetDirectStorageInfo(bool writable, out int width, out string typeName, out string source)
     {
         width = FieldType switch
         {
@@ -236,13 +236,313 @@ internal abstract record BitFieldModel
         };
         typeName = FieldType?.ToString() ?? string.Empty;
 
-        int byteOffset = BitOffset >> 3;
-        source = byteOffset == 0 ? "{4}.Span" : $"{{4}}.Span.Slice({byteOffset})";
+        if (!TryGetByteStorageSource(writable, out source))
+            return false;
 
-        return BackingFieldType == BackingFieldType.Memory &&
-               width != 0 &&
+        int byteOffset = BitOffset >> 3;
+        if (byteOffset != 0)
+            source += $".Slice({byteOffset})";
+
+        return width != 0 &&
                BitCount == width &&
                (BitOffset & 7) == 0;
+    }
+
+    private bool TryGetByteStorageSource(bool writable, out string source)
+    {
+        source = BackingFieldType switch
+        {
+            BackingFieldType.Memory => "{4}.Span",
+            BackingFieldType.Span => "{4}",
+            BackingFieldType.InlineArray when BackingField.TypeString == "byte" =>
+                writable ? "((Span<Byte>)this)" : "((ReadOnlySpan<Byte>)this)",
+            _ => string.Empty
+        };
+
+        return source.Length != 0;
+    }
+
+    /// <summary>
+    /// Creates a direct byte test for boolean fields in byte-addressable storage.
+    /// </summary>
+    protected bool TryGetDirectStorageBooleanReadExpression(out string expression)
+    {
+        expression = string.Empty;
+        if (BackingFieldType == BackingFieldType.Memory)
+            return false;
+
+        if (!TryGetByteStorageSource(writable: false, out string source))
+            return false;
+
+        int byteOffset = BitOffset >> 3;
+        int bitInByte = BitOffset & 7;
+        int mask = 1 << (BitOrder == BitOrder.MostSignificant ? 7 - bitInByte : bitInByte);
+        expression = $"({source}[{byteOffset}] & 0x{mask:X2}) != 0";
+        return true;
+    }
+
+    /// <summary>
+    /// Creates a direct read-modify-write for boolean fields in byte-addressable storage.
+    /// </summary>
+    protected bool TryGetDirectStorageBooleanWriteTemplate(out string template)
+    {
+        template = string.Empty;
+        if (BackingFieldType == BackingFieldType.Memory)
+            return false;
+
+        if (!TryGetByteStorageSource(writable: true, out string source))
+            return false;
+
+        int byteOffset = BitOffset >> 3;
+        int bitInByte = BitOffset & 7;
+        int mask = 1 << (BitOrder == BitOrder.MostSignificant ? 7 - bitInByte : bitInByte);
+        if (BackingFieldType == BackingFieldType.Span)
+        {
+            template =
+                "{0} {1}\n" +
+                "{{\n" +
+                "    if (value)\n" +
+                $"        {source}[{byteOffset}] |= 0x{mask:X2};\n" +
+                "    else\n" +
+                $"        {source}[{byteOffset}] &= 0x{255 ^ mask:X2};\n" +
+                "}}";
+            return true;
+        }
+
+        template =
+            "{0} {1}\n" +
+            "{{\n" +
+            $"    Span<Byte> source = {source};\n" +
+            $"    source[{byteOffset}] = unchecked((Byte)((source[{byteOffset}] & 0x{255 ^ mask:X2}) | " +
+            $"(value ? 0x{mask:X2} : 0)));\n" +
+            "}}";
+        return true;
+    }
+
+    /// <summary>
+    /// Creates a fixed-window read for frequently used multi-byte field widths.
+    /// </summary>
+    protected bool TryGetDirectFixedWidthReadTemplate(out string template)
+    {
+        template = string.Empty;
+        if (!TryGetFixedWidthStorageInfo(
+            writable: false,
+            out string source,
+            out int byteCount,
+            out int shift,
+            out string typeName))
+        {
+            return false;
+        }
+
+        int loadWidth = byteCount <= 4 ? 4 : 8;
+        string fastWindow =
+            $"unchecked((UInt64)System.Runtime.CompilerServices.Unsafe.ReadUnaligned<UInt{loadWidth * 8}>(" +
+            "ref MemoryMarshal.GetReference(source)))";
+        if (BitOrder == BitOrder.MostSignificant)
+            fastWindow = $"BinaryPrimitives.ReverseEndianness({fastWindow}) >> {64 - loadWidth * 8}";
+
+        string returnType = ReturnType ?? typeName;
+        int fastShift = BitOrder == BitOrder.MostSignificant ?
+            loadWidth * 8 - (BitOffset & 7) - BitCount :
+            shift;
+        string fastResult = GetFixedWidthResultExpression(returnType, "current", fastShift);
+        string exactResult = GetFixedWidthResultExpression(returnType, "current", shift);
+        string exactWindow = GetWindowReadExpression("source", byteCount, BitOrder);
+
+        template =
+            "{0} {1}\n" +
+            "{{\n" +
+            $"    ReadOnlySpan<Byte> source = {source};\n" +
+            $"    if (source.Length < {loadWidth})\n" +
+            "        return ReadExact(source);\n" +
+            $"    UInt64 current = {fastWindow};\n" +
+            $"    return {fastResult};\n" +
+            "\n" +
+            "    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]\n" +
+            $"    static {returnType} ReadExact(ReadOnlySpan<Byte> source)\n" +
+            "    {{\n" +
+            $"        source = source.Slice(0, {byteCount});\n" +
+            $"        UInt64 current = {exactWindow};\n" +
+            $"        return {exactResult};\n" +
+            "    }}\n" +
+            "}}";
+        return true;
+    }
+
+    /// <summary>
+    /// Creates a fixed-window read-modify-write for frequently used multi-byte field widths.
+    /// </summary>
+    protected bool TryGetDirectFixedWidthWriteTemplate(string valueExpression, out string template)
+    {
+        template = string.Empty;
+        if (!TryGetFixedWidthStorageInfo(
+            writable: true,
+            out string source,
+            out int byteCount,
+            out int shift,
+            out _))
+        {
+            return false;
+        }
+
+        ulong valueMask = (1UL << BitCount) - 1;
+        int loadWidth = byteCount <= 4 ? 4 : 8;
+        int fastShift = BitOrder == BitOrder.MostSignificant ?
+            loadWidth * 8 - (BitOffset & 7) - BitCount :
+            shift;
+        ulong fastFieldMask = valueMask << fastShift;
+        ulong exactFieldMask = valueMask << shift;
+        string fastRead =
+            $"unchecked((UInt64)System.Runtime.CompilerServices.Unsafe.ReadUnaligned<UInt{loadWidth * 8}>(" +
+            "ref MemoryMarshal.GetReference(source)))";
+        string fastWriteValue = "current";
+        if (BitOrder == BitOrder.MostSignificant)
+        {
+            fastRead = $"BinaryPrimitives.ReverseEndianness({fastRead}) >> {64 - loadWidth * 8}";
+            fastWriteValue =
+                $"BinaryPrimitives.ReverseEndianness(current << {64 - loadWidth * 8})";
+        }
+
+        string typeName = FieldType!.Value.ToString();
+        string exactRead = GetWindowReadExpression("source", byteCount, BitOrder);
+        string exactWrites = GetWindowWriteStatements("source", "current", byteCount, BitOrder);
+
+        template =
+            "{0} {1}\n" +
+            "{{\n" +
+            $"    Span<Byte> source = {source};\n" +
+            $"    if (source.Length < {loadWidth})\n" +
+            "    {{\n" +
+            $"        WriteExact(source, unchecked(({typeName})({valueExpression})));\n" +
+            "        return;\n" +
+            "    }}\n" +
+            $"    UInt64 current = {fastRead};\n" +
+            $"    current = (current & ~0x{fastFieldMask:X}UL) | " +
+            $"((unchecked((UInt64)({valueExpression})) << {fastShift}) & 0x{fastFieldMask:X}UL);\n" +
+            $"    System.Runtime.CompilerServices.Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(source), unchecked((UInt{loadWidth * 8})({fastWriteValue})));\n" +
+            "\n" +
+            "    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]\n" +
+            $"    static void WriteExact(Span<Byte> source, {typeName} value)\n" +
+            "    {{\n" +
+            $"        source = source.Slice(0, {byteCount});\n" +
+            $"        UInt64 current = {exactRead};\n" +
+            $"        current = (current & ~0x{exactFieldMask:X}UL) | " +
+            $"((unchecked((UInt64)(value)) << {shift}) & 0x{exactFieldMask:X}UL);\n" +
+            $"        {exactWrites}\n" +
+            "    }}\n" +
+            "}}";
+        return true;
+    }
+
+    private string GetFixedWidthResultExpression(string returnType, string value, int shift)
+    {
+        ulong valueMask = (1UL << BitCount) - 1;
+        string extracted = $"(({value} >> {shift}) & 0x{valueMask:X}UL)";
+
+        if (FieldType is BitFieldType.SByte or
+            BitFieldType.Int16 or
+            BitFieldType.Int32 or
+            BitFieldType.Int64)
+        {
+            int signShift = 64 - BitCount;
+            return $"unchecked(({returnType})(unchecked((Int64)({extracted} << {signShift})) >> {signShift}))";
+        }
+
+        return $"unchecked(({returnType}){extracted})";
+    }
+
+    private bool TryGetFixedWidthStorageInfo(
+        bool writable,
+        out string source,
+        out int byteCount,
+        out int shift,
+        out string typeName)
+    {
+        source = string.Empty;
+        byteCount = 0;
+        shift = 0;
+        typeName = FieldType?.ToString() ?? string.Empty;
+
+        if (BitCount is not (11 or 12 or 24 or 48) ||
+            FieldType is not (BitFieldType.SByte or
+                              BitFieldType.Byte or
+                              BitFieldType.Int16 or
+                              BitFieldType.UInt16 or
+                              BitFieldType.Int32 or
+                              BitFieldType.UInt32 or
+                              BitFieldType.Int64 or
+                              BitFieldType.UInt64) ||
+            !TryGetByteStorageSource(writable, out source))
+        {
+            return false;
+        }
+
+        int bitInByte = BitOffset & 7;
+        byteCount = (bitInByte + BitCount + 7) >> 3;
+        int byteOffset = BitOffset >> 3;
+        if (byteOffset != 0)
+            source += $".Slice({byteOffset})";
+        shift = BitOrder == BitOrder.MostSignificant ?
+            byteCount * 8 - bitInByte - BitCount :
+            bitInByte;
+        return true;
+    }
+
+    private static string GetWindowReadExpression(string source, int byteCount, BitOrder bitOrder)
+    {
+        if (bitOrder == BitOrder.LeastSignificant)
+        {
+            return byteCount switch
+            {
+                2 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt16LittleEndian({source}))",
+                3 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt16LittleEndian({source}) | ((UInt64){source}[2] << 16))",
+                4 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt32LittleEndian({source}))",
+                6 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt32LittleEndian({source}) | ((UInt64)BinaryPrimitives.ReadUInt16LittleEndian({source}.Slice(4)) << 32))",
+                7 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt32LittleEndian({source}) | ((UInt64)BinaryPrimitives.ReadUInt16LittleEndian({source}.Slice(4)) << 32) | ((UInt64){source}[6] << 48))",
+                _ => throw new NotSupportedException()
+            };
+        }
+
+        return byteCount switch
+        {
+            2 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt16BigEndian({source}))",
+            3 => $"unchecked(((UInt64)BinaryPrimitives.ReadUInt16BigEndian({source}) << 8) | {source}[2])",
+            4 => $"unchecked((UInt64)BinaryPrimitives.ReadUInt32BigEndian({source}))",
+            6 => $"unchecked(((UInt64)BinaryPrimitives.ReadUInt32BigEndian({source}) << 16) | BinaryPrimitives.ReadUInt16BigEndian({source}.Slice(4)))",
+            7 => $"unchecked(((UInt64)BinaryPrimitives.ReadUInt32BigEndian({source}) << 24) | ((UInt64)BinaryPrimitives.ReadUInt16BigEndian({source}.Slice(4)) << 8) | {source}[6])",
+            _ => throw new NotSupportedException()
+        };
+    }
+
+    private static string GetWindowWriteStatements(
+        string source,
+        string value,
+        int byteCount,
+        BitOrder bitOrder)
+    {
+        if (bitOrder == BitOrder.LeastSignificant)
+        {
+            return byteCount switch
+            {
+                2 => $"BinaryPrimitives.WriteUInt16LittleEndian({source}, unchecked((UInt16){value}));",
+                3 => $"BinaryPrimitives.WriteUInt16LittleEndian({source}, unchecked((UInt16){value})); {source}[2] = unchecked((Byte)({value} >> 16));",
+                4 => $"BinaryPrimitives.WriteUInt32LittleEndian({source}, unchecked((UInt32){value}));",
+                6 => $"BinaryPrimitives.WriteUInt32LittleEndian({source}, unchecked((UInt32){value})); BinaryPrimitives.WriteUInt16LittleEndian({source}.Slice(4), unchecked((UInt16)({value} >> 32)));",
+                7 => $"BinaryPrimitives.WriteUInt32LittleEndian({source}, unchecked((UInt32){value})); BinaryPrimitives.WriteUInt16LittleEndian({source}.Slice(4), unchecked((UInt16)({value} >> 32))); {source}[6] = unchecked((Byte)({value} >> 48));",
+                _ => throw new NotSupportedException()
+            };
+        }
+
+        return byteCount switch
+        {
+            2 => $"BinaryPrimitives.WriteUInt16BigEndian({source}, unchecked((UInt16){value}));",
+            3 => $"BinaryPrimitives.WriteUInt16BigEndian({source}, unchecked((UInt16)({value} >> 8))); {source}[2] = unchecked((Byte){value});",
+            4 => $"BinaryPrimitives.WriteUInt32BigEndian({source}, unchecked((UInt32){value}));",
+            6 => $"BinaryPrimitives.WriteUInt32BigEndian({source}, unchecked((UInt32)({value} >> 16))); BinaryPrimitives.WriteUInt16BigEndian({source}.Slice(4), unchecked((UInt16){value}));",
+            7 => $"BinaryPrimitives.WriteUInt32BigEndian({source}, unchecked((UInt32)({value} >> 24))); BinaryPrimitives.WriteUInt16BigEndian({source}.Slice(4), unchecked((UInt16)({value} >> 8))); {source}[6] = unchecked((Byte){value});",
+            _ => throw new NotSupportedException()
+        };
     }
 
     /// <summary>

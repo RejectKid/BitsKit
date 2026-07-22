@@ -30,7 +30,8 @@ internal sealed record BooleanFieldModel : BitFieldModel
 
     protected override string GetGetterTemplate()
     {
-        if (TryGetDirectIntegralBooleanReadExpression(out string expression))
+        if (TryGetDirectStorageBooleanReadExpression(out string expression) ||
+            TryGetDirectIntegralBooleanReadExpression(out expression))
             return "{0} {1} => " + expression + ";";
 
         string template = BackingFieldType == BackingFieldType.Integral ?
@@ -42,13 +43,16 @@ internal sealed record BooleanFieldModel : BitFieldModel
 
     protected override string GetSetterTemplate()
     {
+        if (TryGetDirectStorageBooleanWriteTemplate(out string template))
+            return template;
+
         if (TryGetDirectIntegralWriteExpression("value ? 1 : 0", out string expression))
             return "{0} {1} => " + expression + ";";
 
-        string template = BackingFieldType == BackingFieldType.Integral ?
+        string fallbackTemplate = BackingFieldType == BackingFieldType.Integral ?
             StringConstants.BooleanSetterTemplate :
             StringConstants.BooleanSpanSetterTemplate;
 
-        return string.Format(template, SetterSource(), FieldType);
+        return string.Format(fallbackTemplate, SetterSource(), FieldType);
     }
 }

@@ -89,16 +89,30 @@ function Get-ComparableBenchmarkMethods {
         'GeneratedAccessorSetEnumMSB',
         'GeneratedAccessorGetMemoryLSB',
         'GeneratedAccessorSetMemoryLSB',
+        'GeneratedAccessorGetMemoryBooleanLSB',
+        'GeneratedAccessorSetMemoryBooleanLSB',
+        'GeneratedAccessorGetMemory12LSB',
+        'GeneratedAccessorSetMemory12LSB',
+        'GeneratedAccessorGetMemory24LSB',
+        'GeneratedAccessorSetMemory24LSB',
+        'GeneratedAccessorGetMemory48LSB',
+        'GeneratedAccessorSetMemory48LSB',
         'GeneratedAccessorGetAlignedMemoryUInt32LSB',
         'GeneratedAccessorSetAlignedMemoryUInt32LSB',
         'GeneratedAccessorGetAlignedMemoryUInt64LSB',
         'GeneratedAccessorSetAlignedMemoryUInt64LSB',
-        'GeneratedAccessorGetInlineArrayLSB') {
+        'GeneratedAccessorGetAlignedSpanUInt32LSB',
+        'GeneratedAccessorSetAlignedSpanUInt32LSB',
+        'GeneratedAccessorGetSpanBooleanLSB',
+        'GeneratedAccessorSetSpanBooleanLSB',
+        'GeneratedAccessorGetInlineArrayLSB',
+        'GeneratedAccessorGetAlignedInlineArrayUInt32LSB',
+        'GeneratedAccessorSetAlignedInlineArrayUInt32LSB') {
         $methods.Add($method)
     }
 
-    if ($methods.Count -ne 74) {
-        throw "Expected 74 comparable benchmark methods, found $($methods.Count)."
+    if ($methods.Count -ne 88) {
+        throw "Expected 88 comparable benchmark methods, found $($methods.Count)."
     }
 
     return $methods

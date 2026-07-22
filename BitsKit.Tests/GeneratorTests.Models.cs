@@ -294,6 +294,41 @@ public partial struct AlignedMemoryAccessorStruct
     public Memory<byte> EnumBacking;
 }
 
+[BitObject(BitOrder.LeastSignificant)]
+public partial struct SpecializedMemoryAccessorStruct
+{
+    [BitField(5)]
+    [BitField("Value11", 11, BitFieldType.UInt32)]
+    public Memory<byte> Backing11;
+
+    [BitField(3)]
+    [BitField("SignedValue12", 12, BitFieldType.Int32)]
+    public Memory<byte> SignedBacking12;
+
+    [BitField(5)]
+    [BitField("BigEndianValue24", 24, BitFieldType.UInt32, ReverseBitOrder = true)]
+    public Memory<byte> BigEndianBacking24;
+
+    [BitField(7)]
+    [BitField("BigEndianValue48", 48, BitFieldType.UInt64, ReverseBitOrder = true)]
+    public Memory<byte> BigEndianBacking48;
+}
+
+[BitObject(BitOrder.LeastSignificant)]
+public ref partial struct SpecializedSpanAccessorStruct
+{
+    [BitField("AlignedValue", 32, BitFieldType.UInt32)]
+    public Span<byte> AlignedBacking;
+
+    [BitField(5)]
+    [BooleanField("Flag")]
+    [BooleanField("BigEndianFlag", ReverseBitOrder = true)]
+    public Span<byte> BooleanBacking;
+
+    [BitField("ReadOnlyAlignedValue", 32, BitFieldType.UInt32)]
+    public ReadOnlySpan<byte> ReadOnlyAlignedBacking;
+}
+
 #if NET8_0_OR_GREATER
 
 [BitObject(BitOrder.LeastSignificant)]
@@ -302,6 +337,24 @@ public partial struct OptimizedInlineArrayAccessorStruct
 {
     [BitField(5)]
     [BitField("Value", 11, BitFieldType.UInt32, Modifiers = BitFieldModifiers.ReadOnly)]
+    private byte _element;
+}
+
+[BitObject(BitOrder.LeastSignificant)]
+[InlineArray(4)]
+public partial struct SpecializedAlignedInlineArrayAccessorStruct
+{
+    [BitField("Value", 32, BitFieldType.UInt32)]
+    private byte _element;
+}
+
+[BitObject(BitOrder.LeastSignificant)]
+[InlineArray(1)]
+public partial struct SpecializedBooleanInlineArrayAccessorStruct
+{
+    [BitField(5)]
+    [BooleanField("Flag")]
+    [BooleanField("BigEndianFlag", ReverseBitOrder = true)]
     private byte _element;
 }
 
