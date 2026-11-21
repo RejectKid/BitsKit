@@ -28,7 +28,7 @@ For optimization work, compare the runtime operations shared with the original r
 ./eng/Run-Benchmark-Regression.ps1 -Job Medium -RegressionTolerancePercent 5
 ```
 
-The script builds both libraries for `net8.0`, runs them sequentially under the same .NET 10 BenchmarkDotNet host, and writes Markdown and JSON ratio reports under `artifacts/benchmark-regression`. Add `-Enforce` to return a failure when any operation exceeds the allowed slowdown. The **Original performance regression** workflow exposes the same settings for on-demand hosted runs; use `Dry` only to validate the harness, not for performance conclusions.
+The script runs the original and candidate libraries sequentially on the same BenchmarkDotNet host and writes Markdown and JSON ratio reports under `artifacts/benchmark-regression`. Choose `net9.0`, `net10.0` (the default), or `net11.0` with `-Framework`. The original library uses its nearest compatible target, `net8.0`. The candidate uses the matching target when available. Pass `-CandidateRef v1.7.0` to benchmark a specific tag in a temporary worktree. Add `-Enforce` to return a failure when any operation exceeds the allowed slowdown. The **Original performance regression** workflow runs all three runtimes in parallel and supports a specific candidate ref; use `Dry` only to validate the harness, not for performance conclusions.
 
 During optimization, use `-MethodFilter 'GeneratedAccessor*'` (or another PowerShell wildcard) to run a focused comparison before the complete confirmation pass.
 

@@ -3,6 +3,10 @@ name: Original performance regression
 on:
   workflow_dispatch:
     inputs:
+      candidate_ref:
+        description: Candidate branch, tag, or commit (defaults to this workflow's checkout)
+        required: false
+        type: string
       job:
         description: BenchmarkDotNet job length
         required: true
@@ -33,9 +37,19 @@ concurrency:
 
 jobs:
   compare:
-    name: Compare with original BitsKit
+    name: Compare with original BitsKit (${{ matrix.framework }})
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - framework: net9.0
+            runtime-sdk: 9.0.x
+          - framework: net10.0
+            runtime-sdk: 10.0.x
+          - framework: net11.0
+            runtime-sdk: 11.0.x
 
     steps:
       - name: Check out repository history
@@ -47,7 +61,7 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: |
-            10.0.x
+            ${{ matrix.runtime-sdk }}
             11.0.x
           cache: true
           cache-dependency-path: '**/packages.lock.json'
@@ -55,11 +69,15 @@ jobs:
       - name: Compare fork-point and current performance
         shell: pwsh
         env:
+          CANDIDATE_REF: ${{ inputs.candidate_ref }}
+          BENCHMARK_FRAMEWORK: ${{ matrix.framework }}
           BENCHMARK_JOB: ${{ inputs.job }}
           REGRESSION_TOLERANCE: ${{ inputs.regression_tolerance_percent }}
           ENFORCE_REGRESSIONS: ${{ inputs.enforce }}
         run: |
           $parameters = @{
+            CandidateRef = $env:CANDIDATE_REF
+            Framework = $env:BENCHMARK_FRAMEWORK
             Job = $env:BENCHMARK_JOB
             RegressionTolerancePercent = [double]::Parse(
               $env:REGRESSION_TOLERANCE,
@@ -76,7 +94,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: original-performance-regression
+          name: original-performance-regression-${{ matrix.framework }}
           path: artifacts/benchmark-regression
           if-no-files-found: warn
           retention-days: 90

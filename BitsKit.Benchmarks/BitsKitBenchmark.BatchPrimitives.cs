@@ -1,4 +1,5 @@
 ﻿using BenchmarkDotNet.Attributes;
+using BitsKit.BitFields;
 using BitsKit.Primitives;
 
 namespace BitsKit.Benchmarks;
@@ -130,4 +131,12 @@ public partial class BitsKitBenchmark
             values[i] = unchecked((uint)i * 0x9E3779B9u);
         return values;
     }
+}
+
+[BitObject(BitOrder.LeastSignificant, GenerateBatchAccessors = true)]
+public partial struct GeneratedBatchAccessorModel
+{
+    [BitField(3)]
+    [BitField("Value", 12, BitFieldType.UInt32)]
+    public Memory<byte> BackingField;
 }

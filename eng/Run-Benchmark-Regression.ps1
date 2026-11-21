@@ -2,6 +2,11 @@
 param(
     [string] $BaselineCommit = '57b6b1fdae2dbc36f6d1a61bdcae4cb6052c215a',
 
+    [string] $CandidateRef,
+
+    [ValidateSet('net9.0', 'net10.0', 'net11.0')]
+    [string] $Framework = 'net10.0',
+
     [ValidateSet('Dry', 'Short', 'Medium', 'Long')]
     [string] $Job = 'Medium',
 
@@ -23,7 +28,9 @@ $runName = '{0}-{1}' -f (Get-Date -Format 'yyyyMMdd-HHmmss'), [Guid]::NewGuid().
 $runArtifactsPath = Join-Path $resolvedArtifactsPath "runs/$runName"
 $temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) ("BitsKit-regression-{0}" -f [Guid]::NewGuid().ToString('N'))
 $baselineRoot = Join-Path $temporaryRoot 'baseline'
-$worktreeCreated = $false
+$candidateRoot = $repositoryRoot
+$baselineWorktreeCreated = $false
+$candidateWorktreeCreated = $false
 
 if ($Enforce -and $Job -eq 'Dry') {
     throw 'Dry benchmarks have only one measurement and cannot enforce performance regressions.'
@@ -37,7 +44,9 @@ function Invoke-Tool {
         [Parameter(Mandatory)]
         [string[]] $Arguments,
 
-        [string] $WorkingDirectory = $repositoryRoot
+        [string] $WorkingDirectory = $repositoryRoot,
+
+        [hashtable] $Environment = @{}
     )
 
     $startInfo = [Diagnostics.ProcessStartInfo]::new()
@@ -47,6 +56,10 @@ function Invoke-Tool {
 
     foreach ($argument in $Arguments) {
         [void] $startInfo.ArgumentList.Add($argument)
+    }
+
+    foreach ($variable in $Environment.GetEnumerator()) {
+        $startInfo.Environment[$variable.Key] = $variable.Value
     }
 
     $process = [Diagnostics.Process]::Start($startInfo)
@@ -134,32 +147,34 @@ function Invoke-BenchmarkVariant {
     )
 
     $variantArtifacts = Join-Path $runArtifactsPath $Name
-    $buildProperties = @(
-        "-p:BitsKitProjectPath=$BitsKitProjectPath",
-        "-p:BitsKitGeneratorProjectPath=$BitsKitGeneratorProjectPath"
-    )
+    # BenchmarkDotNet starts its own dotnet process. Keep both project paths
+    # available when it builds the generated benchmark executable.
+    $variantEnvironment = @{
+        BitsKitProjectPath = $BitsKitProjectPath
+        BitsKitGeneratorProjectPath = $BitsKitGeneratorProjectPath
+        BitsKitRegressionLockFilePath = Join-Path $temporaryRoot "$Name.packages.lock.json"
+    }
     $cleanArguments = @(
         'clean',
         $projectPath,
         '--configuration', 'Release',
-        '--framework', 'net10.0'
-    ) + $buildProperties
-    Invoke-Tool -FileName 'dotnet' -Arguments $cleanArguments
+        '--framework', $Framework
+    )
+    Invoke-Tool -FileName 'dotnet' -Arguments $cleanArguments -Environment $variantEnvironment
 
     $restoreArguments = @(
         'restore',
         $projectPath,
         '--force-evaluate'
-    ) + $buildProperties
-    Invoke-Tool -FileName 'dotnet' -Arguments $restoreArguments
+    )
+    Invoke-Tool -FileName 'dotnet' -Arguments $restoreArguments -Environment $variantEnvironment
 
     $arguments = @(
         'run',
         '--project', $projectPath,
         '--configuration', 'Release',
-        '--framework', 'net10.0',
-        '--no-restore'
-    ) + $buildProperties + @(
+        '--framework', $Framework,
+        '--no-restore',
         '--',
         '--filter'
     )
@@ -174,7 +189,7 @@ function Invoke-BenchmarkVariant {
         '--artifacts', $variantArtifacts
     )
 
-    Invoke-Tool -FileName 'dotnet' -Arguments $arguments
+    Invoke-Tool -FileName 'dotnet' -Arguments $arguments -Environment $variantEnvironment
 
     $jsonReport = Get-ChildItem (Join-Path $variantArtifacts 'results') -Filter '*-report-full-compressed.json' |
         Select-Object -First 1
@@ -194,7 +209,9 @@ function Get-CommitHash {
     $startInfo.UseShellExecute = $false
     $startInfo.RedirectStandardOutput = $true
     [void] $startInfo.ArgumentList.Add('rev-parse')
-    [void] $startInfo.ArgumentList.Add($Revision)
+    [void] $startInfo.ArgumentList.Add('--verify')
+    [void] $startInfo.ArgumentList.Add('--end-of-options')
+    [void] $startInfo.ArgumentList.Add("${Revision}^{commit}")
 
     $process = [Diagnostics.Process]::Start($startInfo)
     $output = $process.StandardOutput.ReadToEnd().Trim()
@@ -217,8 +234,17 @@ try {
     }
 
     New-Item -ItemType Directory -Force -Path $temporaryRoot | Out-Null
-    Invoke-Tool -FileName 'git' -Arguments @('worktree', 'add', '--detach', $baselineRoot, $BaselineCommit)
-    $worktreeCreated = $true
+    $baselineHash = Get-CommitHash $BaselineCommit
+    Invoke-Tool -FileName 'git' -Arguments @('worktree', 'add', '--detach', $baselineRoot, $baselineHash)
+    $baselineWorktreeCreated = $true
+
+    $currentHash = Get-CommitHash 'HEAD'
+    if (![string]::IsNullOrWhiteSpace($CandidateRef)) {
+        $currentHash = Get-CommitHash $CandidateRef
+        $candidateRoot = Join-Path $temporaryRoot 'candidate'
+        Invoke-Tool -FileName 'git' -Arguments @('worktree', 'add', '--detach', $candidateRoot, $currentHash)
+        $candidateWorktreeCreated = $true
+    }
 
     $allMethods = @(Get-ComparableBenchmarkMethods)
     $methods = @($allMethods | Where-Object {
@@ -230,23 +256,27 @@ try {
     }
     $baselineProjectPath = Join-Path $baselineRoot 'BitsKit/BitsKit.csproj'
     $baselineGeneratorProjectPath = Join-Path $baselineRoot 'BitsKit.Generator/BitsKit.Generator.csproj'
-    $currentProjectPath = Join-Path $repositoryRoot 'BitsKit/BitsKit.csproj'
-    $currentGeneratorProjectPath = Join-Path $repositoryRoot 'BitsKit.Generator/BitsKit.Generator.csproj'
+    $currentProjectPath = Join-Path $candidateRoot 'BitsKit/BitsKit.csproj'
+    $currentGeneratorProjectPath = Join-Path $candidateRoot 'BitsKit.Generator/BitsKit.Generator.csproj'
 
     Write-Host "Running fork-point benchmarks from $BaselineCommit..."
     $baseline = Invoke-BenchmarkVariant -Name 'baseline' -BitsKitProjectPath $baselineProjectPath -BitsKitGeneratorProjectPath $baselineGeneratorProjectPath -Methods $methods
 
-    Write-Host 'Running current benchmarks...'
+    Write-Host "Running candidate benchmarks from $currentHash..."
     $current = Invoke-BenchmarkVariant -Name 'current' -BitsKitProjectPath $currentProjectPath -BitsKitGeneratorProjectPath $currentGeneratorProjectPath -Methods $methods
 
     $baselineByMethod = @{}
     foreach ($benchmark in $baseline.Benchmarks) {
-        $baselineByMethod[$benchmark.Method] = $benchmark
+        if ($benchmark.Statistics.Mean -gt 0) {
+            $baselineByMethod[$benchmark.Method] = $benchmark
+        }
     }
 
     $currentByMethod = @{}
     foreach ($benchmark in $current.Benchmarks) {
-        $currentByMethod[$benchmark.Method] = $benchmark
+        if ($benchmark.Statistics.Mean -gt 0) {
+            $currentByMethod[$benchmark.Method] = $benchmark
+        }
     }
 
     $missingBaseline = @($methods | Where-Object { !$baselineByMethod.ContainsKey($_) })
@@ -314,14 +344,12 @@ try {
         [Math]::Log($_.CurrentNanoseconds / $_.BaselineNanoseconds)
     } | Measure-Object -Average).Average))
     $geometricMeanChange = ($geometricMeanRatio - 1) * 100
-    $baselineHash = Get-CommitHash $BaselineCommit
-    $currentHash = Get-CommitHash 'HEAD'
-
     $report = [Collections.Generic.List[string]]::new()
     $report.Add('# Original BitsKit performance regression report')
     $report.Add('')
     $report.Add("- Baseline: ``$baselineHash``")
     $report.Add("- Current: ``$currentHash``")
+    $report.Add("- Framework: $Framework")
     $report.Add("- Job: ``$Job``")
     $report.Add("- Host: $($baseline.HostEnvironmentInfo.ProcessorName), $($baseline.HostEnvironmentInfo.RuntimeVersion)")
     $report.Add("- Allowed regression: $($RegressionTolerancePercent.ToString('0.##'))%")
@@ -353,11 +381,22 @@ try {
     }
 }
 finally {
-    if ($worktreeCreated) {
+    if ($candidateWorktreeCreated) {
+        Invoke-Tool -FileName 'git' -Arguments @('worktree', 'remove', '--force', $candidateRoot)
+    }
+
+    if ($baselineWorktreeCreated) {
         Invoke-Tool -FileName 'git' -Arguments @('worktree', 'remove', '--force', $baselineRoot)
     }
 
+    foreach ($variant in 'baseline', 'current') {
+        $lockFile = Join-Path $temporaryRoot "$variant.packages.lock.json"
+        if (Test-Path -LiteralPath $lockFile) {
+            Remove-Item -LiteralPath $lockFile -Force
+        }
+    }
+
     if (Test-Path -LiteralPath $temporaryRoot) {
-        Remove-Item -LiteralPath $temporaryRoot -Force
+        [IO.Directory]::Delete($temporaryRoot)
     }
 }
