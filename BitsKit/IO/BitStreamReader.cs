@@ -102,28 +102,28 @@ public sealed class BitStreamReader : IBitReader, IBitStream
     /// <inheritdoc cref="BitStreamWriter.Dispose"/>
     public void Dispose()
     {
-        if (!_disposed)
+        if (_disposed)
+            return;
+
+        try
         {
-            try
+            if (_leaveOpen)
             {
-                if (_leaveOpen)
-                {
-                    if (_stream.CanSeek)
-                        _stream.Position = (_position >> 3) + ((_position & 7) == 0 ? 0 : 1);
-                }
-                else
-                {
-                    _stream.Dispose();
-                }
+                if (_stream.CanSeek)
+                    _stream.Position = (_position >> 3) + ((_position & 7) == 0 ? 0 : 1);
             }
-            finally
+            else
             {
-                ArrayPool<byte>.Shared.Return(_buffer, clearArray: true);
-                _stream = null!;
-                _buffer = null!;
-                _disposed = true;
-                GC.SuppressFinalize(this);
+                _stream.Dispose();
             }
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(_buffer, clearArray: true);
+            _stream = null!;
+            _buffer = null!;
+            _disposed = true;
+            GC.SuppressFinalize(this);
         }
     }
 

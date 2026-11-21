@@ -132,16 +132,14 @@ public sealed class BitObjectAnalyser : DiagnosticAnalyzer
             .Where(member => !IsBitsKitGeneratedMember(member))
             .Select(member => member.Name));
         existingNames.Add(type.Name);
-        int inlineArrayLength = GetInlineArrayLength(type);
+        int inlineArrayLength = type.GetInlineArrayLength();
 
         foreach (IFieldSymbol field in type.GetMembers().OfType<IFieldSymbol>())
         {
             if (!field.TryGetAttributesWithBaseType(bitFieldAttribute, out List<AttributeData>? attributes))
                 continue;
 
-            BackingFieldType backingType = BackingFieldModel.Classify(field);
-            if (backingType == BackingFieldType.Integral && inlineArrayLength > 0)
-                backingType = BackingFieldType.InlineArray;
+            BackingFieldType backingType = BackingFieldModel.Classify(field, inlineArrayLength);
 
             Location fieldLocation = field.Locations.FirstOrDefault() ?? Location.None;
             if (backingType == BackingFieldType.Invalid)
@@ -170,7 +168,6 @@ public sealed class BitObjectAnalyser : DiagnosticAnalyzer
                 type,
                 field,
                 backing,
-                backingType,
                 attributes,
                 inlineArrayLength,
                 existingNames,
@@ -184,13 +181,14 @@ public sealed class BitObjectAnalyser : DiagnosticAnalyzer
         INamedTypeSymbol type,
         IFieldSymbol field,
         BackingFieldModel backing,
-        BackingFieldType backingType,
         List<AttributeData> attributes,
         int inlineArrayLength,
         HashSet<string> existingNames,
         HashSet<string> generatedNames,
         Location fieldLocation)
     {
+        SpecialType storageType = field.Type.SpecialType;
+        int capacity = backing.GetCapacity(storageType, inlineArrayLength);
         int offset = 0;
         foreach (AttributeData attribute in attributes)
         {
@@ -202,16 +200,12 @@ public sealed class BitObjectAnalyser : DiagnosticAnalyzer
                 .GetSyntax(context.CancellationToken).GetLocation() ?? fieldLocation;
             bool isPadding = model.FieldType == BitFieldType.Padding;
             BitFieldType? declaredFieldType = model.FieldType;
-            BitFieldType? effectiveFieldType = model.FieldType;
-            if (backingType == BackingFieldType.Integral)
-                effectiveFieldType = field.Type.SpecialType.ToBitFieldType();
-            else if (backingType == BackingFieldType.InlineArray)
-                effectiveFieldType ??= field.Type.SpecialType.ToBitFieldType();
+            BitFieldType? effectiveFieldType = backing.ResolveFieldType(declaredFieldType, storageType);
 
             if (!isPadding)
             {
                 AnalyzeName(context, type, model, location, existingNames, generatedNames);
-                AnalyzeModifiers(context, type, field, backing, model, location);
+                AnalyzeModifiers(context, type, backing, model, location);
 
                 int maximumWidth = model is EnumFieldModel
                     ? declaredFieldType?.GetBitWidth() ?? 0
@@ -229,7 +223,6 @@ public sealed class BitObjectAnalyser : DiagnosticAnalyzer
                 }
             }
 
-            int capacity = GetCapacity(backingType, backing, field, inlineArrayLength);
             long end = (long)offset + model.BitCount;
             if (capacity != int.MaxValue && end > capacity)
             {
@@ -279,31 +272,11 @@ public sealed class BitObjectAnalyser : DiagnosticAnalyzer
     private static void AnalyzeModifiers(
         SymbolAnalysisContext context,
         INamedTypeSymbol type,
-        IFieldSymbol field,
         BackingFieldModel backing,
         BitFieldModel model,
         Location location)
     {
-        const BitFieldModifiers knownModifiers =
-            BitFieldModifiers.AccessorMask |
-            BitFieldModifiers.ReadOnly |
-            BitFieldModifiers.InitOnly |
-            BitFieldModifiers.Required;
-        string? reason = null;
-
-        if ((model.Modifiers & ~knownModifiers) != 0)
-            reason = "unknown modifier bits";
-        else if (type.TypeKind == TypeKind.Struct &&
-                 (model.Modifiers & BitFieldModifiers.AccessorMask) is
-                     BitFieldModifiers.Protected or
-                     BitFieldModifiers.ProtectedInternal or
-                     BitFieldModifiers.PrivateProtected)
-            reason = "struct members cannot be protected";
-        else if (model.Modifiers.HasFlag(BitFieldModifiers.Required) &&
-                 (model.Modifiers.HasFlag(BitFieldModifiers.ReadOnly) ||
-                  field.IsReadOnly || backing.IsReadOnlyStorage))
-            reason = "required fields must have a writable setter";
-
+        string? reason = model.GetInvalidModifierReason(backing, type.TypeKind == TypeKind.Struct);
         if (reason is not null)
         {
             context.ReportDiagnostic(Diagnostic.Create(
@@ -314,24 +287,6 @@ public sealed class BitObjectAnalyser : DiagnosticAnalyzer
                 reason));
         }
     }
-
-    private static int GetCapacity(
-        BackingFieldType backingType,
-        BackingFieldModel backing,
-        IFieldSymbol field,
-        int inlineArrayLength) => backingType switch
-    {
-        BackingFieldType.Integral => field.Type.SpecialType.GetBitWidth(),
-        BackingFieldType.Pointer when backing.FixedSize > 0 => backing.FixedSize * 8,
-        BackingFieldType.InlineArray => inlineArrayLength * field.Type.SpecialType.GetBitWidth(),
-        _ => int.MaxValue
-    };
-
-    private static int GetInlineArrayLength(INamedTypeSymbol type) =>
-        (int?)type.GetAttributes()
-            .FirstOrDefault(attribute =>
-                attribute.AttributeClass?.ToDisplayString() == StringConstants.InlineArrayAttributeFullName)?
-            .ConstructorArguments[0].Value ?? 0;
 
     private static bool IsBitsKitGeneratedMember(ISymbol member)
     {

@@ -48,6 +48,34 @@ internal abstract record BitFieldModel
         }
     }
 
+    internal string? GetInvalidModifierReason(BackingFieldModel backing, bool isStruct)
+    {
+        const BitFieldModifiers knownModifiers =
+            BitFieldModifiers.AccessorMask |
+            BitFieldModifiers.ReadOnly |
+            BitFieldModifiers.InitOnly |
+            BitFieldModifiers.Required;
+        if ((Modifiers & ~knownModifiers) != 0)
+            return "unknown modifier bits";
+
+        if (isStruct &&
+            (Modifiers & BitFieldModifiers.AccessorMask) is
+                BitFieldModifiers.Protected or
+                BitFieldModifiers.ProtectedInternal or
+                BitFieldModifiers.PrivateProtected)
+        {
+            return "struct members cannot be protected";
+        }
+
+        if (Modifiers.HasFlag(BitFieldModifiers.Required) &&
+            (Modifiers.HasFlag(BitFieldModifiers.ReadOnly) || backing.IsReadOnly || backing.IsReadOnlyStorage))
+        {
+            return "required fields must have a writable setter";
+        }
+
+        return null;
+    }
+
     public void GenerateCSharpSource(StringBuilder sb)
     {
         string accessor = GetAccessor();
