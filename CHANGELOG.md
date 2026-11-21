@@ -4,6 +4,17 @@ Notable changes to the community-maintained fork are documented here. This proje
 
 ## Unreleased
 
+## 1.7.0 - 2026-11-21
+
+### Added
+
+- Dedicated library builds for .NET 9 and .NET 11, with tests on both runtimes and package validation for both assemblies.
+
+### Changed
+
+- The source generator and analyzer share backing-field layout, type resolution, and modifier validation.
+- Stream disposal and package validation are simpler, and the build uses Source Link from the .NET SDK.
+
 ## 1.6.1 - 2026-07-22
 
 ### Fixed

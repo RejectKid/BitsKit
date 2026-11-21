@@ -1,3 +1,8 @@
+v1.7.0
+- Add dedicated .NET 9 and .NET 11 library builds, with tests and package validation for both targets.
+- Share backing-field layout, type resolution, and modifier validation between the source generator and analyzer.
+- Simplify stream disposal and package validation, and use Source Link from the .NET SDK.
+
 v1.6.1
 - Apply the release version consistently to NuGet, assembly, file, and informational metadata.
 - Validate every shipped DLL's embedded version before publishing a package.

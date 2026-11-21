@@ -9,7 +9,7 @@ on:
       version:
         description: Package version for a non-publishing dry run
         required: true
-        default: 1.6.1-preview.1
+        default: 1.7.0-preview.1
         type: string
 
 permissions:
