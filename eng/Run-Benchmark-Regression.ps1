@@ -389,7 +389,14 @@ finally {
         Invoke-Tool -FileName 'git' -Arguments @('worktree', 'remove', '--force', $baselineRoot)
     }
 
+    foreach ($variant in 'baseline', 'current') {
+        $lockFile = Join-Path $temporaryRoot "$variant.packages.lock.json"
+        if (Test-Path -LiteralPath $lockFile) {
+            Remove-Item -LiteralPath $lockFile -Force
+        }
+    }
+
     if (Test-Path -LiteralPath $temporaryRoot) {
-        Remove-Item -LiteralPath $temporaryRoot -Force
+        [IO.Directory]::Delete($temporaryRoot)
     }
 }
