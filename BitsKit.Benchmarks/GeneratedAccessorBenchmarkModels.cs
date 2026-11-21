@@ -54,14 +54,6 @@ public enum GeneratedAccessorKind : uint
     Seven
 }
 
-[BitObject(BitOrder.LeastSignificant, GenerateBatchAccessors = true)]
-public partial struct GeneratedBatchAccessorModel
-{
-    [BitField(3)]
-    [BitField("Value", 12, BitFieldType.UInt32)]
-    public Memory<byte> BackingField;
-}
-
 [BitObject(BitOrder.LeastSignificant)]
 public partial struct GeneratedAccessorMemoryModel
 {
@@ -94,30 +86,6 @@ public partial struct GeneratedAccessorAlignedMemoryModel
 
     [BitField("UInt64Value", 64, BitFieldType.UInt64)]
     public Memory<byte> UInt64BackingField;
-}
-
-[BitObject(BitOrder.LeastSignificant)]
-public partial struct GeneratedAccessorCheckedAccessModel
-{
-    [BitField(3)]
-    [BitField("Value20", 20, BitFieldType.UInt32)]
-    public Memory<byte> Value20BackingField;
-
-    [BitField(5)]
-    [BooleanField("Flag")]
-    public Memory<byte> BooleanBackingField;
-}
-
-[BitObject(BitOrder.LeastSignificant, AccessMode = BitObjectAccessMode.Unsafe)]
-public partial struct GeneratedAccessorUnsafeAccessModel
-{
-    [BitField(3)]
-    [BitField("Value20", 20, BitFieldType.UInt32)]
-    public Memory<byte> Value20BackingField;
-
-    [BitField(5)]
-    [BooleanField("Flag")]
-    public Memory<byte> BooleanBackingField;
 }
 
 [BitObject(BitOrder.LeastSignificant)]

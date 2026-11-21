@@ -2,19 +2,22 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net9.0;net10.0;net11.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NuGetLockFilePath Condition="'$(BitsKitRegressionLockFilePath)' != ''">$(BitsKitRegressionLockFilePath)</NuGetLockFilePath>
     <BitsKitProjectPath Condition="'$(BitsKitProjectPath)' == ''">$(MSBuildThisFileDirectory)..\BitsKit\BitsKit.csproj</BitsKitProjectPath>
     <BitsKitGeneratorProjectPath Condition="'$(BitsKitGeneratorProjectPath)' == ''">$(MSBuildThisFileDirectory)..\BitsKit.Generator\BitsKit.Generator.csproj</BitsKitGeneratorProjectPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.16.0-preview.1" />
+    <!-- Use the patched diagnostics runtime from the newer BenchmarkDotNet preview. -->
+    <PackageReference Include="Microsoft.Diagnostics.Runtime" Version="4.1.745802" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(BitsKitProjectPath)" AdditionalProperties="TargetFramework=net8.0" />
+    <ProjectReference Include="$(BitsKitProjectPath)" />
     <ProjectReference Include="$(BitsKitGeneratorProjectPath)" AdditionalProperties="TargetFramework=netstandard2.0" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
   </ItemGroup>
 
