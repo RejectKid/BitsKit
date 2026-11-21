@@ -21,6 +21,7 @@ try {
         'analyzers/dotnet/cs/BitsKit.Generator.dll',
         'lib/netstandard2.1/BitsKit.dll',
         'lib/net8.0/BitsKit.dll',
+        'lib/net9.0/BitsKit.dll',
         'lib/net10.0/BitsKit.dll',
         'lib/net11.0/BitsKit.dll'
     )

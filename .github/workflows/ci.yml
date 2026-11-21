@@ -42,6 +42,7 @@ jobs:
         with:
           dotnet-version: |
             8.0.x
+            9.0.x
             10.0.x
             11.0.x
           cache: true
@@ -58,6 +59,9 @@ jobs:
 
       - name: Test .NET 8
         run: dotnet test BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --framework net8.0 --no-build --logger "trx;LogFileName=net8-${{ runner.os }}.trx"
+
+      - name: Test .NET 9
+        run: dotnet test BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --framework net9.0 --no-build --logger "trx;LogFileName=net9-${{ runner.os }}.trx"
 
       - name: Test .NET 10
         run: dotnet test BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --framework net10.0 --no-build --logger "trx;LogFileName=net10-${{ runner.os }}.trx"
