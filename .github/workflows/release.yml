@@ -66,7 +66,9 @@ jobs:
         with:
           dotnet-version: |
             8.0.x
+            9.0.x
             10.0.x
+            11.0.x
           cache: true
           cache-dependency-path: '**/packages.lock.json'
 
@@ -77,13 +79,19 @@ jobs:
         run: dotnet build BitsKit.sln --configuration Release --no-restore -p:Version=${{ steps.version.outputs.version }}
 
       - name: Build InlineArray consumer with modern compiler
-        run: dotnet build BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --framework net10.0 --no-restore -p:LangVersion=preview -p:Version=${{ steps.version.outputs.version }}
+        run: dotnet build BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --framework net11.0 --no-restore -p:LangVersion=preview -p:Version=${{ steps.version.outputs.version }}
 
       - name: Test .NET 8
         run: dotnet test BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --framework net8.0 --no-build
 
+      - name: Test .NET 9
+        run: dotnet test BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --framework net9.0 --no-build
+
       - name: Test .NET 10
         run: dotnet test BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --framework net10.0 --no-build
+
+      - name: Test .NET 11
+        run: dotnet test BitsKit.Tests/BitsKit.Tests.csproj --configuration Release --framework net11.0 --no-build
 
       - name: Pack
         run: dotnet pack BitsKit/BitsKit.csproj --configuration Release --no-build --no-restore --output artifacts -p:Version=${{ steps.version.outputs.version }} -p:PackageVersion=${{ steps.version.outputs.version }} -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg

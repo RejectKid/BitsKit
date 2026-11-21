@@ -17,14 +17,15 @@ $archive = [System.IO.Compression.ZipFile]::OpenRead($resolvedPackage)
 
 try {
     $entryNames = @($archive.Entries | ForEach-Object FullName)
-    $requiredEntries = @(
-        'README.md',
-        'LICENSE.txt',
+    $assemblyEntries = @(
         'analyzers/dotnet/cs/BitsKit.Generator.dll',
         'lib/netstandard2.1/BitsKit.dll',
         'lib/net8.0/BitsKit.dll',
-        'lib/net10.0/BitsKit.dll'
+        'lib/net9.0/BitsKit.dll',
+        'lib/net10.0/BitsKit.dll',
+        'lib/net11.0/BitsKit.dll'
     )
+    $requiredEntries = @('README.md', 'LICENSE.txt') + $assemblyEntries
 
     foreach ($entry in $requiredEntries) {
         if ($entryNames -cnotcontains $entry) {
@@ -66,12 +67,6 @@ try {
     }
 
     $expectedAssemblyVersion = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"
-    $assemblyEntries = @(
-        'analyzers/dotnet/cs/BitsKit.Generator.dll',
-        'lib/netstandard2.1/BitsKit.dll',
-        'lib/net8.0/BitsKit.dll',
-        'lib/net10.0/BitsKit.dll'
-    )
     $temporaryDirectory = Join-Path ([System.IO.Path]::GetTempPath()) (
         'bitskit-package-validation-' + [System.Guid]::NewGuid().ToString('N'))
     [void] [System.IO.Directory]::CreateDirectory($temporaryDirectory)

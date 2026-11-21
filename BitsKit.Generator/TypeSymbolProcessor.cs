@@ -15,7 +15,6 @@ internal sealed record TypeSymbolProcessor
     public BitObjectAccessMode AccessMode { get; }
     public bool GenerateBatchAccessors { get; }
     public bool IsStruct { get; }
-    public bool IsInlineArray { get; }
     public bool IsValid { get; }
     public string HintName { get; }
 
@@ -44,12 +43,11 @@ internal sealed record TypeSymbolProcessor
         AccessMode = accessMode;
         GenerateBatchAccessors = GetGenerateBatchAccessors(attribute);
         IsStruct = typeSymbol.TypeKind == TypeKind.Struct;
-        IsInlineArray = HasInlineArrayAttribute(typeSymbol);
         HintName = CreateHintName(typeSymbol);
 
         Fields = IsValid
             ? EnumerateFields(typeSymbol)
-            : new List<BitFieldModel>().ToEquatableReadOnlyList();
+            : default;
     }
 
     internal static bool TryGetBitOrder(AttributeData attribute, out BitOrder bitOrder)
@@ -122,16 +120,14 @@ internal sealed record TypeSymbolProcessor
         var output = new List<BitFieldModel>();
         var reservedNames = new HashSet<string>(typeSymbol.GetMembers().Select(member => member.Name));
         reservedNames.Add(typeSymbol.Name);
+        int inlineArrayLength = typeSymbol.GetInlineArrayLength();
 
         foreach (IFieldSymbol field in typeSymbol.GetMembers().OfType<IFieldSymbol>())
         {
             if (!IsValidFieldSymbol(field))
                 continue;
 
-            BackingFieldType backingType = BackingFieldModel.Classify(field);
-            if (backingType == BackingFieldType.Integral && IsInlineArray)
-                backingType = BackingFieldType.InlineArray;
-
+            BackingFieldType backingType = BackingFieldModel.Classify(field, inlineArrayLength);
             if (backingType == BackingFieldType.Invalid)
                 continue;
 
@@ -139,7 +135,7 @@ internal sealed record TypeSymbolProcessor
             if (backingModel.IsRawPointer && AccessMode != BitObjectAccessMode.Unsafe)
                 continue;
 
-            CreateBitFieldModels(output, field, backingModel, reservedNames);
+            CreateBitFieldModels(output, field, backingModel, inlineArrayLength, reservedNames);
         }
 
         return output.ToEquatableReadOnlyList();
@@ -149,75 +145,56 @@ internal sealed record TypeSymbolProcessor
         List<BitFieldModel> output,
         IFieldSymbol backingField,
         BackingFieldModel backingModel,
+        int inlineArrayLength,
         HashSet<string> reservedNames)
     {
+        SpecialType storageType = backingField.Type.SpecialType;
+        int capacity = backingModel.GetCapacity(storageType, inlineArrayLength);
         int offset = 0;
 
         foreach (AttributeData attribute in backingField.GetAttributes())
         {
             BitFieldModel? bitField = CreateBitFieldFromAttribute(attribute, this);
+            if (bitField is null)
+                continue;
 
-            if (bitField == null)
+            bitField.BitOffset = offset;
+            offset += bitField.BitCount;
+
+            if (bitField.FieldType == BitFieldType.Padding)
                 continue;
 
             bitField.BackingField = backingModel;
-            bitField.BitOffset = offset;
+            if (bitField.ReverseBitOrder)
+                bitField.BitOrder ^= BitOrder.MostSignificant;
 
-            // padding fields are not generated
-            if (bitField is not { FieldType: BitFieldType.Padding })
+            BitFieldType? declaredFieldType = bitField.FieldType;
+            bitField.FieldType = backingModel.ResolveFieldType(declaredFieldType, storageType);
+
+            // The analyzer reports invalid fields. Skip emitting them here.
+            int fieldWidth = bitField.FieldType?.GetBitWidth() ?? 0;
+            if (fieldWidth == 0 ||
+                (bitField is EnumFieldModel &&
+                 (declaredFieldType is null || bitField.BitCount > declaredFieldType.Value.GetBitWidth())) ||
+                !SymbolFormatting.IsValidGeneratedName(bitField.Name) ||
+                bitField.GetInvalidModifierReason(backingModel, IsStruct) is not null)
             {
-                BitFieldType? declaredFieldType = bitField.FieldType;
-                // invert the bit order if necessary
-                if (bitField.ReverseBitOrder)
-                    bitField.BitOrder ^= BitOrder.MostSignificant;
-
-                // integrals inherit their field type from their backing field
-                if (backingModel.Type == BackingFieldType.Integral)
-                    bitField.FieldType = backingField.Type.SpecialType.ToBitFieldType();
-
-                // allow inline arrays to infer their type
-                if (backingModel.Type == BackingFieldType.InlineArray)
-                    bitField.FieldType ??= backingField.Type.SpecialType.ToBitFieldType();
-
-                // Diagnostics are reported by analyzers. Do not generate an invalid
-                // property when its primitive type could not be resolved.
-                if (bitField.FieldType is null)
-                {
-                    offset += bitField.BitCount;
-                    continue;
-                }
-
-                if (!IsSupportedFieldType(bitField.FieldType.Value) ||
-                    (bitField is EnumFieldModel &&
-                     (declaredFieldType is null ||
-                      bitField.BitCount > declaredFieldType.Value.GetBitWidth())) ||
-                    !SymbolFormatting.IsValidGeneratedName(bitField.Name) ||
-                    !HasValidModifiers(bitField, backingModel))
-                {
-                    offset += bitField.BitCount;
-                    continue;
-                }
-
-                string memberName = bitField.Name.StartsWith("@")
-                    ? bitField.Name.Substring(1)
-                    : bitField.Name;
-                if (!reservedNames.Add(memberName))
-                {
-                    offset += bitField.BitCount;
-                    continue;
-                }
-
-                if (!IsValidLayout(bitField, backingField, backingModel, offset))
-                {
-                    offset += bitField.BitCount;
-                    continue;
-                }
-
-                // add to list of fields to generate
-                output.Add(bitField);
+                continue;
             }
 
-            offset += bitField.BitCount;
+            string memberName = bitField.Name.StartsWith("@")
+                ? bitField.Name.Substring(1)
+                : bitField.Name;
+            if (!reservedNames.Add(memberName))
+                continue;
+
+            if (bitField.BitCount <= 0 || bitField.BitCount > fieldWidth ||
+                bitField.BitOffset > capacity - bitField.BitCount)
+            {
+                continue;
+            }
+
+            output.Add(bitField);
         }
     }
 
@@ -246,72 +223,6 @@ internal sealed record TypeSymbolProcessor
 
         return null;
     }
-
-    private static bool HasInlineArrayAttribute(ITypeSymbol typeSymbol)
-    {
-        return (int?)typeSymbol
-            .GetAttributes()
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == StringConstants.InlineArrayAttributeFullName)?
-            .ConstructorArguments[0].Value > 0;
-    }
-
-    private static bool IsSupportedFieldType(BitFieldType fieldType) => fieldType is
-        BitFieldType.SByte or BitFieldType.Byte or
-        BitFieldType.Int16 or BitFieldType.UInt16 or
-        BitFieldType.Int32 or BitFieldType.UInt32 or
-        BitFieldType.Int64 or BitFieldType.UInt64 or
-        BitFieldType.IntPtr or BitFieldType.UIntPtr or
-        BitFieldType.Boolean;
-
-    private bool HasValidModifiers(BitFieldModel bitField, BackingFieldModel backing)
-    {
-        const BitFieldModifiers knownModifiers =
-            BitFieldModifiers.AccessorMask |
-            BitFieldModifiers.ReadOnly |
-            BitFieldModifiers.InitOnly |
-            BitFieldModifiers.Required;
-        if ((bitField.Modifiers & ~knownModifiers) != 0)
-            return false;
-
-        if (IsStruct &&
-            (bitField.Modifiers & BitFieldModifiers.AccessorMask) is
-                BitFieldModifiers.Protected or
-                BitFieldModifiers.ProtectedInternal or
-                BitFieldModifiers.PrivateProtected)
-        {
-            return false;
-        }
-
-        return !bitField.Modifiers.HasFlag(BitFieldModifiers.Required) ||
-               (!bitField.Modifiers.HasFlag(BitFieldModifiers.ReadOnly) &&
-                !backing.IsReadOnly &&
-                !backing.IsReadOnlyStorage);
-    }
-
-    private bool IsValidLayout(
-        BitFieldModel bitField,
-        IFieldSymbol backingField,
-        BackingFieldModel backingModel,
-        int offset)
-    {
-        if (bitField.BitCount <= 0 || bitField.BitCount > bitField.FieldType!.Value.GetBitWidth())
-            return false;
-
-        int capacity = backingModel.Type switch
-        {
-            BackingFieldType.Integral => backingField.Type.SpecialType.GetBitWidth(),
-            BackingFieldType.Pointer when backingModel.FixedSize > 0 => backingModel.FixedSize * 8,
-            BackingFieldType.InlineArray => GetInlineArrayLength(backingField.ContainingType) * backingField.Type.SpecialType.GetBitWidth(),
-            _ => int.MaxValue
-        };
-
-        return offset <= capacity - bitField.BitCount;
-    }
-
-    private static int GetInlineArrayLength(ITypeSymbol typeSymbol) =>
-        (int?)typeSymbol.GetAttributes()
-            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == StringConstants.InlineArrayAttributeFullName)?
-            .ConstructorArguments[0].Value ?? 0;
 
     private static string CreateHintName(INamedTypeSymbol typeSymbol)
     {

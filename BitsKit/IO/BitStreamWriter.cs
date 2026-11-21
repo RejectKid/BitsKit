@@ -131,27 +131,27 @@ public sealed class BitStreamWriter : IBitWriter, IBitStream
     /// </summary>
     public void Dispose()
     {
-        if (!_disposed)
+        if (_disposed)
+            return;
+
+        try
+        {
+            Flush();
+        }
+        finally
         {
             try
             {
-                Flush();
+                if (!_leaveOpen)
+                    _stream.Dispose();
             }
             finally
             {
-                try
-                {
-                    if (!_leaveOpen)
-                        _stream.Dispose();
-                }
-                finally
-                {
-                    ArrayPool<byte>.Shared.Return(_writeBuffer, clearArray: true);
-                    _stream = null!;
-                    _writeBuffer = null!;
-                    _disposed = true;
-                    GC.SuppressFinalize(this);
-                }
+                ArrayPool<byte>.Shared.Return(_writeBuffer, clearArray: true);
+                _stream = null!;
+                _writeBuffer = null!;
+                _disposed = true;
+                GC.SuppressFinalize(this);
             }
         }
     }

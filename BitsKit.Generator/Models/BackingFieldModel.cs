@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 
 namespace BitsKit.Generator.Models
 {
@@ -33,7 +33,22 @@ namespace BitsKit.Generator.Models
             Type = type;
         }
 
-        public static BackingFieldType Classify(IFieldSymbol field)
+        public BitFieldType? ResolveFieldType(BitFieldType? declaredType, SpecialType storageType) => Type switch
+        {
+            BackingFieldType.Integral => storageType.ToBitFieldType(),
+            BackingFieldType.InlineArray => declaredType ?? storageType.ToBitFieldType(),
+            _ => declaredType
+        };
+
+        public int GetCapacity(SpecialType storageType, int inlineArrayLength) => Type switch
+        {
+            BackingFieldType.Integral => storageType.GetBitWidth(),
+            BackingFieldType.Pointer when FixedSize > 0 => FixedSize * 8,
+            BackingFieldType.InlineArray => inlineArrayLength * storageType.GetBitWidth(),
+            _ => int.MaxValue
+        };
+
+        public static BackingFieldType Classify(IFieldSymbol field, int inlineArrayLength = 0)
         {
             if (field.Type is IArrayTypeSymbol
                 {
@@ -65,9 +80,10 @@ namespace BitsKit.Generator.Models
                 };
             }
 
-            return field.Type.IsSupportedIntegralType()
-                ? BackingFieldType.Integral
-                : BackingFieldType.Invalid;
+            if (!field.Type.IsSupportedIntegralType())
+                return BackingFieldType.Invalid;
+
+            return inlineArrayLength > 0 ? BackingFieldType.InlineArray : BackingFieldType.Integral;
         }
     }
 }
